@@ -2,3 +2,7 @@ activecampaign.db
 dump.sql
 dump_no_tx.sql
 chunk_*
+activecampaign.db
+dump.sql
+dump_no_tx.sql
+chunk_*
