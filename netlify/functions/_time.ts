@@ -1,45 +1,59 @@
-// Robust parsing for 'YYYY-MM-DD HH:MM:SS', ISO, and 'MM/DD/YYYY HH:MM'
-const parse = (s?: string | null): Date | null => {
+import { DateTime } from 'luxon'
+
+// Parse to a UTC ISO string, trying several common formats.
+// We avoid passing the 3rd "options" argument to satisfy TS types across Luxon versions.
+export function parseToUTCISO(s?: string | null): string | null {
   if (!s) return null
   const t = s.trim()
 
-  // Try ISO or "YYYY-MM-DD HH:MM:SS"
-  {
-    const isoish = t.includes(' ') ? t.replace(' ', 'T') : t
-    const d = new Date(isoish)
-    if (!Number.isNaN(d.getTime())) return d
-  }
+  const candidates = [
+    // ISO first (accepts offsets like Z or +00:00)
+    () => DateTime.fromISO(t),
+    // "YYYY-MM-DD HH:mm:ss"
+    () => DateTime.fromFormat(t, "yyyy-MM-dd HH:mm:ss"),
+    // "MM/DD/YYYY HH:mm"
+    () => DateTime.fromFormat(t, "MM/dd/yyyy HH:mm"),
+    // plain date
+    () => DateTime.fromFormat(t, "yyyy-MM-dd")
+  ]
 
-  // Try MM/DD/YYYY HH:MM
-  {
-    const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2})/)
-    if (m) {
-      const [, mm, dd, yyyy, HH, MM] = m.map(Number)
-      const d = new Date(Date.UTC(yyyy, mm - 1, dd, HH, MM))
-      if (!Number.isNaN(d.getTime())) return d
-    }
+  for (const make of candidates) {
+    const dt = make()
+    if (dt.isValid) return dt.toUTC().toISO()
   }
   return null
 }
 
-export const diffMinutes = (start?: string | null, end?: string | null): number | null => {
-  const a = parse(start), b = parse(end)
+const LISBON = 'Europe/Lisbon'
+
+export function diffMinutes(start?: string|null, end?: string|null): number|null {
+  const a = parseToUTCISO(start), b = parseToUTCISO(end)
   if (!a || !b) return null
-  const delta = (b.getTime() - a.getTime()) / 60000
+  const da = DateTime.fromISO(a), db = DateTime.fromISO(b)
+  const delta = db.diff(da, 'minutes').minutes
   return delta >= 0 ? Math.round(delta) : null
 }
 
-export const diffDays = (start?: string | null, end?: string | null): number | null => {
-  const a = parse(start), b = parse(end)
+export function diffDays(start?: string|null, end?: string|null): number|null {
+  const a = parseToUTCISO(start), b = parseToUTCISO(end)
   if (!a || !b) return null
-  const delta = (b.getTime() - a.getTime()) / 86400000
+  const da = DateTime.fromISO(a), db = DateTime.fromISO(b)
+  const delta = db.diff(da, 'days').days
   return delta >= 0 ? Number(delta.toFixed(2)) : null
 }
 
-export const createdDOW = (s?: string | null): string | null => {
-  const d = parse(s); return d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : null
+export function createdDOW(s?: string|null): string|null {
+  const iso = parseToUTCISO(s); if (!iso) return null
+  return DateTime.fromISO(iso).setZone(LISBON).toFormat('cccc') // Monday, Tuesday…
 }
 
-export const createdHour = (s?: string | null): number | null => {
-  const d = parse(s); return d ? d.getUTCHours() : null
+export function createdHour(s?: string|null): number|null {
+  const iso = parseToUTCISO(s); if (!iso) return null
+  return DateTime.fromISO(iso).setZone(LISBON).hour
+}
+
+// Month key YYYY-MM computed in Lisbon zone
+export function monthKey(s?: string|null): string|null {
+  const iso = parseToUTCISO(s); if (!iso) return null
+  return DateTime.fromISO(iso).setZone(LISBON).toFormat('yyyy-LL')
 }

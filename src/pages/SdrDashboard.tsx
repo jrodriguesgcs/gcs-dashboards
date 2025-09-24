@@ -1,22 +1,172 @@
-import { useEffect, useState } from 'react'
-import DataTable from '../components/DataTable'
+import { useEffect, useMemo, useState } from 'react'
+import { Tabs } from '../components/Tabs'
+import { Kpi } from '../components/Kpi'
+import MultiSelect from '../components/MultiSelect'
+import GroupTable from '../components/GroupTable'
+import PagedTable from '../components/PagedTable'
+
+type AgentAgg = {
+  sdr_agent: string
+  created: number
+  distributed: number
+  calls_scheduled: number
+  calls_completed: number
+  proposals: number
+  closed_won: number
+}
+type TimeStats = {
+  sdr_agent: string
+  t_dist_avg: number|null; t_dist_med: number|null; t_dist_modes: string;
+  t_booking_avg: number|null; t_booking_med: number|null; t_booking_modes: string;
+  t_conn_avg: number|null; t_conn_med: number|null; t_conn_modes: string;
+  t_dist_show_avg: number|null; t_dist_show_med: number|null; t_dist_show_modes: string;
+  t_prop_avg: number|null; t_prop_med: number|null; t_prop_modes: string;
+  t_close_avg: number|null; t_close_med: number|null; t_close_modes: string;
+}
 
 export default function SdrDashboard() {
-  const [rows, setRows] = useState<any[]>([])
+  const [agents, setAgents] = useState<string[]>([])
+  const [agentsSel, setAgentsSel] = useState<string[]>([])
+  const [months, setMonths] = useState<{[k:string]:string}>({})
   const [loading, setLoading] = useState(false)
+
+  const qs = useMemo(() => {
+    const sp = new URLSearchParams()
+    Object.entries(months).forEach(([k,v]) => v && sp.set(k,v))
+    if (agentsSel.length) sp.set('agents', agentsSel.join('||'))
+    return sp.toString()
+  }, [months, agentsSel])
+
+  const [overview, setOverview] = useState<any>()
+  const [agentTable, setAgentTable] = useState<AgentAgg[]>([])
+  const [timeTable, setTimeTable] = useState<TimeStats[]>([])
+  const [lostReasons, setLostReasons] = useState<{reason:string; count:number}[]>([])
+  const [breakdown, setBreakdown] = useState<any[]>([])
 
   useEffect(() => {
     setLoading(true)
-    fetch('/.netlify/functions/sdr')
+    fetch('/.netlify/functions/sdr/meta')
       .then(r => r.json())
-      .then(d => setRows(d.rows ?? []))
-      .finally(() => setLoading(false))
+      .then(d => { setAgents(d.agents); setAgentsSel(d.agents) })
   }, [])
 
+  useEffect(() => {
+    setLoading(true)
+    fetch('/.netlify/functions/sdr?' + qs)
+      .then(r => r.json())
+      .then(d => {
+        setOverview(d.tabs.overview)
+        setAgentTable(d.tabs.agentConversion)
+        setTimeTable(d.tabs.timeIntervals)
+        setLostReasons(d.tabs.mqlLostReasons)
+        setBreakdown(d.tabs.breakdown)
+      })
+      .finally(()=>setLoading(false))
+  }, [qs])
+
   return (
-    <section className="dash-section">
-      <h3>SDR Dashboard</h3>
-      <DataTable loading={loading} rows={rows} />
+    <section className="grid" style={{gap:12}}>
+      <div className="grid" style={{gridTemplateColumns:'2fr 1fr', gap:12}}>
+        <div className="card pad">
+          <div className="fs-text-lg fw-semibold" style={{marginBottom:8}}>Filters</div>
+          <div className="grid auto">
+            {['createdMonth','distributedMonth','callMonth','proposalMonth'].map(k => (
+              <label key={k} className="fs-text-sm fw-semibold">
+                {k.replace('Month','').replace(/^\w/, s=>s.toUpperCase())} Month
+                <input className="btn" type="month" onChange={e => setMonths(m => ({...m, [k]: e.target.value}))} />
+              </label>
+            ))}
+          </div>
+        </div>
+        <MultiSelect label="SDR Agent" options={agents} value={agentsSel} onChange={setAgentsSel} />
+      </div>
+
+      {overview && (
+        <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(160px,1fr))', gap:12}}>
+          <Kpi label="Created" value={overview.created} />
+          <Kpi label="Distributed" value={overview.distributed} />
+          <Kpi label="Calls Scheduled" value={overview.calls_scheduled} />
+          <Kpi label="Calls Completed" value={overview.calls_completed} />
+          <Kpi label="Proposals Sent" value={overview.proposals} />
+          <Kpi label="Closed Won" value={overview.closed_won} />
+        </div>
+      )}
+
+      <Tabs
+        tabs={[
+          {
+            key:'agent',
+            label:'SDR Conversion',
+            content: <PagedTable
+              rows={agentTable}
+              columns={[
+                {key:'sdr_agent', label:'SDR Agent'},
+                {key:'created', label:'Created'},
+                {key:'distributed', label:'Distributed'},
+                {key:'calls_scheduled', label:'Calls Scheduled'},
+                {key:'calls_completed', label:'Calls Completed'},
+                {key:'proposals', label:'Proposals Sent'},
+                {key:'closed_won', label:'Closed Won'}
+              ]}
+            />
+          },
+          {
+            key:'time',
+            label:'Time Intervals (avg/med/mode)',
+            content: <PagedTable
+              rows={timeTable}
+              columns={[
+                {key:'sdr_agent', label:'SDR Agent'},
+                {key:'t_dist_avg', label:'T Dist (min) avg'},
+                {key:'t_dist_med', label:'T Dist (min) med'},
+                {key:'t_dist_modes', label:'T Dist modes'},
+                {key:'t_booking_avg', label:'T Booking (days) avg'},
+                {key:'t_booking_med', label:'T Booking (days) med'},
+                {key:'t_booking_modes', label:'T Booking modes'},
+                {key:'t_conn_avg', label:'T Connection (days) avg'},
+                {key:'t_conn_med', label:'T Connection (days) med'},
+                {key:'t_conn_modes', label:'T Connection modes'},
+                {key:'t_dist_show_avg', label:'Dist→Show (days) avg'},
+                {key:'t_dist_show_med', label:'Dist→Show (days) med'},
+                {key:'t_dist_show_modes', label:'Dist→Show modes'},
+                {key:'t_prop_avg', label:'T Proposal (min) avg'},
+                {key:'t_prop_med', label:'T Proposal (min) med'},
+                {key:'t_prop_modes', label:'T Proposal modes'},
+                {key:'t_close_avg', label:'T Close (days) avg'},
+                {key:'t_close_med', label:'T Close (days) med'},
+                {key:'t_close_modes', label:'T Close modes'}
+              ]}
+            />
+          },
+          {
+            key:'lost',
+            label:'MQL Lost Reasons',
+            content: <PagedTable
+              rows={lostReasons}
+              columns={[
+                {key:'reason', label:'MQL Lost Reason'},
+                {key:'count', label:'Count'}
+              ]}
+            />
+          },
+          {
+            key:'breakdown',
+            label:'Breakdown (Country → Program)',
+            content: <GroupTable
+              data={breakdown}
+              columns={[
+                {key:'created', label:'Created'},
+                {key:'distributed', label:'Distributed'},
+                {key:'calls_scheduled', label:'Calls Scheduled'},
+                {key:'calls_completed', label:'Calls Completed'},
+                {key:'proposals', label:'Proposals Sent'},
+                {key:'closed_won', label:'Closed Won'}
+              ]}
+            />
+          }
+        ]}
+      />
+      {loading && <div className="muted">Loading…</div>}
     </section>
   )
 }

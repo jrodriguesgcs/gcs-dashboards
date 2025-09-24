@@ -8,7 +8,9 @@ export default function App() {
   return (
     <div className="app-wrap">
       <header className="app-header">
-        <h1>Global Citizen Solutions Dashboards</h1>
+        <h1 className="fs-display-md fw-bold" style={{color:'var(--color-night-blue)'}}>
+          Global Citizen Solutions Dashboards
+        </h1>
       </header>
 
       <DashboardSwitcher />

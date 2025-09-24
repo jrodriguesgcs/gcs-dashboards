@@ -1,7 +1,10 @@
-activecampaign.db
-dump.sql
-dump_no_tx.sql
-chunk_*
+node_modules
+dist
+.vite
+.env
+.netlify/
+.DS_Store
+*.log
 activecampaign.db
 dump.sql
 dump_no_tx.sql

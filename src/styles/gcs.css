@@ -1,32 +1,930 @@
-:root {
-  --color-night-blue: #1955a6;
-  --color-electric-blue: #00b4c5;
-  --surface: #ffffff;
-  --surface-2: #f6f8fb;
-  --text: #0b3a63;
-  --muted: #6b7c93;
+/* ==== PASTE YOUR ORIGINAL GCS STYLING HERE ==== */
+
+/* Non-conflicting helpers the app shell uses */
+.app-wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+.app-header { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(25,85,166,.12); }
+.switcher { display:flex; gap:12px; flex-wrap:wrap; margin: 16px 0; }
+.switch-btn { padding:10px 12px; border:2px solid var(--color-electric-blue); border-radius:8px; color:var(--color-night-blue); text-decoration:none; font-weight:600; }
+.switch-btn.active, .switch-btn:hover { background: var(--color-electric-blue); color:#fff; }
+.card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(25,85,166,.12); }
+.card.pad { padding:16px; }
+.toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.btn { padding:8px 12px; border-radius:8px; border:1px solid #cdd7e1; background:#fff; cursor:pointer; font-weight:600; }
+.btn.primary { background: var(--color-electric-blue); color:#fff; border-color: var(--color-electric-blue); }
+.btn.ghost { background:#fff; color:var(--color-night-blue); border:1px solid var(--color-electric-blue); }
+.grid { display:grid; gap:12px; }
+.grid.auto { grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); }
+.table-wrap { overflow:auto; }
+table { border-collapse: collapse; width:100%; }
+th, td { padding: 10px 12px; border-bottom: 1px solid #eef2f7; text-align: left; }
+th { background: #f3f8fc; color: var(--color-night-blue); position: sticky; top: 0; cursor: pointer; }
+
+body,
+html {
+  overflow-x: hidden;
 }
 
-* { box-sizing: border-box; }
-body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--surface-2); color: var(--text); }
+:root {
+  /* BRAND COLORS */
+  --color-night-blue: #000957;
+  --color-white: #ffffff;
+  --color-electric-blue: #3f8cff;
+  --color-dark-blue: #07101f;
+  --color-ice-white: #e8ebf0;
 
-.app-wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
-.app-header { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(25,85,166,.12); }
-.app-header h1 { margin: 0; color: var(--color-night-blue); }
+  /* NIGHT BLUE GRADIENTS */
+  --color-night-blue-50: #b3b5cd;
+  --color-night-blue-100: #8084ab;
+  --color-night-blue-200: #333a79;
+  --color-night-blue-300: #1a2268;
+  --color-night-blue-500: #00084e;
+  --color-night-blue-600: #000746;
+  --color-night-blue-700: #000534;
+  --color-night-blue-800: #00052c;
+  --color-night-blue-900: #00031a;
 
-.switcher { display:flex; gap:12px; flex-wrap: wrap; margin: 16px 0; }
-.switch-btn { padding: 10px 12px; border:2px solid var(--color-electric-blue); border-radius:8px; color: var(--color-night-blue); text-decoration: none; font-weight:600; }
-.switch-btn.active, .switch-btn:hover { background: var(--color-electric-blue); color: #fff; }
+  /* ELECTRIC BLUE GRADIENTS */
+  --color-electric-blue-20: #ecf4ff;
+  --color-electric-blue-50: #c4d9ff;
+  --color-electric-blue-100: #b2d1ff;
+  --color-electric-blue-200: #8cbaff;
+  --color-electric-blue-300: #65a3ff;
+  --color-electric-blue-500: #3270cc;
+  --color-electric-blue-600: #2c62b3;
+  --color-electric-blue-700: #265499;
+  --color-electric-blue-800: #193866;
+  --color-electric-blue-900: #132a4c;
 
-.dash-section h3 { margin: 12px 0; }
+  /* GREY GRADIENTS */
+  --color-grey-50: #d1d4d8;
+  --color-grey-100: #babcc0;
+  --color-grey-200: #a2a5a8;
+  --color-grey-300: #8b8d90;
+  --color-grey-400: #717680;
+  --color-grey-500: #666a73;
+  --color-grey-600: #535862;
+  --color-grey-700: #414651;
+  --color-grey-800: #252b37;
+  --color-grey-900: #181d27;
 
-.filters-card { background: var(--surface); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(25,85,166,.12); margin-bottom: 12px; }
-.filters-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px; }
-.filters-grid label { display:flex; flex-direction: column; gap:6px; font-weight: 600; color: var(--color-night-blue); }
-.filters-grid input { padding:10px 12px; border:1px solid #cdd7e1; border-radius:8px; }
+  /* ERROR GRADIENTS */
+  --color-error-25: #fffbfa;
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-400: #f97066;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+  --color-error-800: #912018;
+  --color-error-900: #7a271a;
 
-.table-card { background: var(--surface); border-radius: 12px; overflow:auto; box-shadow: 0 2px 8px rgba(25,85,166,.12); }
-.table-card table { border-collapse: collapse; width: 100%; }
-.table-card th, .table-card td { padding: 10px 12px; border-bottom: 1px solid #eef2f7; text-align: left; }
-.table-card th { background: #f3f8fc; color: var(--color-night-blue); position: sticky; top: 0; cursor: pointer; }
-.loading { padding: 12px; color: var(--muted); }
+  /* WARNING GRADIENTS */
+  --color-warning-25: #fffcf5;
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-300: #fec84b;
+  --color-warning-400: #fdb022;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+  --color-warning-800: #93370d;
+  --color-warning-900: #7a2e0e;
+
+  /* SUCCESS GRADIENTS */
+  --color-success-25: #f6fef9;
+  --color-success-50: #ecfdf3;
+  --color-success-100: #d1fadf;
+  --color-success-200: #a6f4c5;
+  --color-success-300: #6ce9a6;
+  --color-success-400: #32d583;
+  --color-success-500: #12b76a;
+  --color-success-600: #039855;
+  --color-success-700: #027a48;
+  --color-success-800: #05603a;
+  --color-success-900: #054f31;
+
+  /* GLOBAL FONT SIZES  */
+
+  /* DISPLAY  */
+
+  /* 88px - 56px  */
+  --fs-display-3xl: clamp(2.25rem, 1.6rem + 3.25vw, 5.5rem);
+  /* 72px - 40px  */
+  --fs-display-2xl: clamp(2.5rem, 2.1rem + 2vw, 4.5rem);
+  /* 60px - 40px */
+  --fs-display-xl: clamp(2.5rem, 2.25rem + 1.25vw, 3.75rem);
+  /* 48px - 36px */
+  --fs-display-lg: clamp(2.25rem, 2.1rem + 0.75vw, 3rem);
+  /* 40px - 34.4px */
+  --fs-display-md-lg: clamp(2.15rem, 2.08rem + 0.3500000000000001vw, 2.5rem);
+  /* 36px - 32px */
+  --fs-display-md: clamp(2rem, 1.95rem + 0.25vw, 2.25rem);
+  /* 30px - 20px */
+  --fs-display-sm: clamp(1.25rem, 1.125rem + 0.625vw, 1.875rem);
+  /* 24px - 18px */
+  --fs-display-xs: clamp(1.125rem, 1.05rem + 0.375vw, 1.5rem);
+
+  /* TEXT */
+
+  /* 20px - 18px */
+  --fs-text-xl: clamp(1.125rem, 1.1rem + 0.125vw, 1.25rem);
+  /* 18px - 16px */
+  --fs-text-lg: clamp(1rem, 0.95rem + 0.25vw, 1.25rem);
+  /* 16px */
+  --fs-text-md: 1rem;
+  /* 14px */
+  --fs-text-sm: 0.875rem;
+  /* 12px */
+  --fs-text-xs: 0.75rem;
+  /* 10px */
+  --fs-text-xxs: 0.625rem;
+
+  /* FONT FAMILY */
+
+  --ff-heebo: "Heebo", sans-serif;
+  --ff-yrsa: "Yrsa", serif;
+
+  /* FONTS WEIGHT */
+
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+  --fw-black: 900;
+
+  /* ANIMATIONS FUNCTIONS */
+  --efx-350: all 350ms ease-in-out;
+}
+
+/* GLOBAL TEXT STYLES */
+
+/* display  font-sizes */
+
+.fs-display-3xl,
+.fs-display-3xl h1,
+.fs-display-3xl h2,
+.fs-display-3xl h3,
+.fs-display-3xl h4,
+.fs-display-3xl h5,
+.fs-display-3xl h6,
+.fs-display-3xl p,
+.fs-display-3xl span,
+.fs-display-3xl a,
+.fs-display-3xl div {
+  font-size: var(--fs-display-3xl) !important;
+}
+
+.fs-display-2xl,
+.fs-display-2xl h1,
+.fs-display-2xl h2,
+.fs-display-2xl h3,
+.fs-display-2xl h4,
+.fs-display-2xl h5,
+.fs-display-2xl h6,
+.fs-display-2xl p,
+.fs-display-2xl span,
+.fs-display-2xl a,
+.fs-display-2xl div {
+  font-size: var(--fs-display-2xl) !important;
+}
+
+.fs-display-xl,
+.fs-display-xl h1,
+.fs-display-xl h2,
+.fs-display-xl h3,
+.fs-display-xl h4,
+.fs-display-xl h5,
+.fs-display-xl h6,
+.fs-display-xl p,
+.fs-display-xl span,
+.fs-display-xl a,
+.fs-display-xl div {
+  font-size: var(--fs-display-xl) !important;
+}
+
+.fs-display-lg,
+.fs-display-lg h1,
+.fs-display-lg h2,
+.fs-display-lg h3,
+.fs-display-lg h4,
+.fs-display-lg h5,
+.fs-display-lg h6,
+.fs-display-lg p,
+.fs-display-lg span,
+.fs-display-lg a,
+.fs-display-lg div {
+  font-size: var(--fs-display-lg) !important;
+}
+
+.fs-display-md-lg,
+.fs-display-md-lg h1,
+.fs-display-md-lg h2,
+.fs-display-md-lg h3,
+.fs-display-md-lg h4,
+.fs-display-md-lg h5,
+.fs-display-md-lg h6,
+.fs-display-md-lg p,
+.fs-display-md-lg span,
+.fs-display-md-lg a,
+.fs-display-md-lg div {
+  font-size: var(--fs-display-md-lg) !important;
+}
+
+.fs-display-md,
+.fs-display-md h1,
+.fs-display-md h2,
+.fs-display-md h3,
+.fs-display-md h4,
+.fs-display-md h5,
+.fs-display-md h6,
+.fs-display-md p,
+.fs-display-md span,
+.fs-display-md a,
+.fs-display-md div {
+  font-size: var(--fs-display-md) !important;
+}
+
+.fs-display-sm,
+.fs-display-sm h1,
+.fs-display-sm h2,
+.fs-display-sm h3,
+.fs-display-sm h4,
+.fs-display-sm h5,
+.fs-display-sm h6,
+.fs-display-sm p,
+.fs-display-sm span,
+.fs-display-sm a,
+.fs-display-sm div {
+  font-size: var(--fs-display-sm) !important;
+}
+
+.fs-display-xs,
+.fs-display-xs h1,
+.fs-display-xs h2,
+.fs-display-xs h3,
+.fs-display-xs h4,
+.fs-display-xs h5,
+.fs-display-xs h6,
+.fs-display-xs p,
+.fs-display-xs span,
+.fs-display-xs a,
+.fs-display-xs div {
+  font-size: var(--fs-display-xs) !important;
+}
+
+/* text font-sizes */
+
+.fs-text-xl,
+.fs-text-xl h1,
+.fs-text-xl h2,
+.fs-text-xl h3,
+.fs-text-xl h4,
+.fs-text-xl h5,
+.fs-text-xl h6,
+.fs-text-xl p,
+.fs-text-xl span,
+.fs-text-xl a,
+.fs-text-xl div {
+  font-size: var(--fs-text-xl) !important;
+}
+
+.fs-text-lg,
+.fs-text-lg h1,
+.fs-text-lg h2,
+.fs-text-lg h3,
+.fs-text-lg h4,
+.fs-text-lg h5,
+.fs-text-lg h6,
+.fs-text-lg p,
+.fs-text-lg span,
+.fs-text-lg a,
+.fs-text-lg div {
+  font-size: var(--fs-text-lg) !important;
+  line-height: 1.1;
+}
+
+.fs-text-md,
+.fs-text-md h1,
+.fs-text-md h2,
+.fs-text-md h3,
+.fs-text-md h4,
+.fs-text-md h5,
+.fs-text-md h6,
+.fs-text-md p,
+.fs-text-md span,
+.fs-text-md a,
+.fs-text-md div {
+  font-size: var(--fs-text-md) !important;
+  line-height: 1.4;
+}
+
+.fs-text-sm,
+.fs-text-sm h1,
+.fs-text-sm h2,
+.fs-text-sm h3,
+.fs-text-sm h4,
+.fs-text-sm h5,
+.fs-text-sm h6,
+.fs-text-sm p,
+.fs-text-sm span,
+.fs-text-sm a,
+.fs-text-sm div {
+  font-size: var(--fs-text-sm) !important;
+  line-height: 1.4 !important;
+}
+
+.fs-text-xs,
+.fs-text-xs h1,
+.fs-text-xs h2,
+.fs-text-xs h3,
+.fs-text-xs h4,
+.fs-text-xs h5,
+.fs-text-xs h6,
+.fs-text-xs p,
+.fs-text-xs span,
+.fs-text-xs a,
+.fs-text-xs div {
+  font-size: var(--fs-text-xs) !important;
+}
+
+/* font family */
+
+.ff-heebo,
+.ff-heebo h1,
+.ff-heebo h2,
+.ff-heebo h3,
+.ff-heebo h4,
+.ff-heebo h5,
+.ff-heebo h6,
+.ff-heebo p,
+.ff-heebo span,
+.ff-heebo a {
+  font-family: var(--ff-heebo);
+}
+
+.ff-yrsa,
+.ff-yrsa h1,
+.ff-yrsa h2,
+.ff-yrsa h3,
+.ff-yrsa h4,
+.ff-yrsa h5,
+.ff-yrsa h6,
+.ff-yrsa p,
+.ff-yrsa span,
+.ff-yrsa a {
+  font-family: var(--ff-yrsa);
+}
+
+/* font weight */
+.fw-light,
+.fw-light h1,
+.fw-light h2,
+.fw-light h3,
+.fw-light h4,
+.fw-light h5,
+.fw-light h6,
+.fw-light p,
+.fw-light span,
+.fw-light a .fw-light div {
+  font-weight: var(--fw-light);
+}
+
+.fw-regular,
+.fw-regular h1,
+.fw-regular h2,
+.fw-regular h3,
+.fw-regular h4,
+.fw-regular h5,
+.fw-regular h6,
+.fw-regular p,
+.fw-regular span,
+.fw-regular a .fw-regular div {
+  font-weight: var(--fw-regular);
+}
+
+.fw-medium,
+.fw-medium h1,
+.fw-medium h2,
+.fw-medium h3,
+.fw-medium h4,
+.fw-medium h5,
+.fw-medium h6,
+.fw-medium p,
+.fw-medium span,
+.fw-medium a,
+.fw-medium div {
+  font-weight: var(--fw-medium);
+}
+
+.fw-semibold,
+.fw-semibold h1,
+.fw-semibold h2,
+.fw-semibold h3,
+.fw-semibold h4,
+.fw-semibold h5,
+.fw-semibold h6,
+.fw-semibold p,
+.fw-semibold span,
+.fw-semibold a,
+.fw-semibold div {
+  font-weight: var(--fw-semibold);
+}
+
+.fw-bold,
+.fw-bold h1,
+.fw-bold h2,
+.fw-bold h3,
+.fw-bold h4,
+.fw-bold h5,
+.fw-bold h6,
+.fw-bold p,
+.fw-bold span,
+.fw-bold a,
+.fw-bold div {
+  font-weight: var(--fw-bold);
+}
+
+.fw-extrabold,
+.fw-extrabold h1,
+.fw-extrabold h2,
+.fw-extrabold h3,
+.fw-extrabold h4,
+.fw-extrabold h5,
+.fw-extrabold h6,
+.fw-extrabold p,
+.fw-extrabold span,
+.fw-extrabold a,
+.fw-extrabold div {
+  font-weight: var(--fw-extrabold);
+}
+
+.fw-black,
+.fw-black h1,
+.fw-black h2,
+.fw-black h3,
+.fw-black h4,
+.fw-black h5,
+.fw-black h6,
+.fw-black p,
+.fw-black span,
+.fw-black a,
+.fw-black div {
+  font-weight: var(--fw-black);
+}
+
+.txt-accent,
+.txt-accent h1,
+.txt-accent h2,
+.txt-accent h3,
+.txt-accent h4,
+.txt-accent h5,
+.txt-accent h6,
+.txt-accent p,
+.txt-accent span,
+.txt-accent a,
+.txt-accent div {
+  font-style: italic;
+  color: var(--color-night-blue-50);
+}
+
+/* text widths */
+
+.txt-90-percent h1,
+.txt-90-percent h2,
+.txt-90-percent h3,
+.txt-90-percent h4,
+.txt-90-percent h5,
+.txt-90-percent h6,
+.txt-90-percent p,
+.txt-90-percent span,
+.txt-90-percent a,
+.txt-90-percent div {
+  width: 90% !important;
+}
+
+.txt-95-percent h1,
+.txt-95-percent h2,
+.txt-95-percent h3,
+.txt-95-percent h4,
+.txt-95-percent h5,
+.txt-95-percent h6,
+.txt-95-percent p,
+.txt-95-percent span,
+.txt-95-percent a,
+.txt-95-percent div {
+  width: 95% !important;
+}
+
+.txt-85-percent h1,
+.txt-85-percent h2,
+.txt-85-percent h3,
+.txt-85-percent h4,
+.txt-85-percent h5,
+.txt-85-percent h6,
+.txt-85-percent p,
+.txt-85-percent span,
+.txt-85-percent a,
+.txt-85-percent div {
+  width: 85% !important;
+}
+.txt-80-percent h1,
+.txt-80-percent h2,
+.txt-80-percent h3,
+.txt-80-percent h4,
+.txt-80-percent h5,
+.txt-80-percent h6,
+.txt-80-percent p,
+.txt-80-percent span,
+.txt-80-percent a,
+.txt-80-percent div {
+  width: 80% !important;
+}
+
+/* text styles */
+
+.content-block ul,
+.content-block ol {
+  padding-left: 1rem;
+  padding-bottom: 1rem;
+}
+
+.content-block li strong,
+.content-block strong {
+  font-weight: var(--fw-bold);
+}
+
+.content-block li::marker {
+  color: var(--color-electric-blue);
+}
+
+.card-chip span {
+  background-color: var(--color-electric-blue);
+  padding: 7px 7px 5px 7px;
+  font-size: var(--fs-text-md);
+  font-weight: var(--fw-semibold) !important;
+  text-transform: uppercase !important;
+}
+
+.card-chip-white span {
+  background-color: transparent;
+  padding: 3px 8px;
+  font-size: var(--fs-text-xxs) !important;
+  font-weight: var(--fw-medium) !important;
+  text-transform: uppercase !important;
+  border: 1px solid var(--color-white);
+  border-radius: 0;
+  color: var(--color-white) !important;
+}
+
+/* GLOBAL PADDING */
+
+.pad-top {
+  padding-top: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-top-med {
+  padding-top: 4rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-top-big {
+  padding-top: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-top-big-only {
+  padding-top: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+  padding-bottom: 0;
+}
+
+.pad-bot-med {
+  padding-bottom: 4rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-bot-med-only {
+  padding-bottom: 4rem;
+}
+
+.pad-bot-med-no-top {
+  padding-bottom: 4rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+  padding-top: 0;
+}
+
+.pad-bot-big-only {
+  padding-bottom: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+  padding-top: 0;
+}
+
+.pad-big-top-small-bot {
+  padding-top: 8rem;
+  padding-bottom: 3rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-big-top-med-bot {
+  padding-top: 8rem;
+  padding-bottom: 4rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-med-top-small-bot {
+  padding-top: 4rem;
+  padding-bottom: 2rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-med-top-big-bot {
+  padding-top: 4rem;
+  padding-bottom: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-small-top-big-bot {
+  padding-top: 3rem;
+  padding-bottom: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-top-med-no-bot {
+  padding-top: 4rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+  padding-bottom: 0;
+}
+
+.pad-bot {
+  padding-bottom: 8rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-tb {
+  padding: 8rem 4rem;
+}
+
+.pad-tb-med-only {
+  padding: 4rem 0;
+}
+
+.pad-sides {
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-col-right {
+  padding-right: 4rem;
+}
+
+.pad-col-right-small {
+  padding-right: 2rem;
+}
+
+.pad-col-left {
+  padding-left: 4rem;
+}
+
+.pad-col-left-small {
+  padding-left: 2rem;
+}
+
+.pad-tb-small {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-top-small-med-bot {
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.pad-all-square {
+  padding: 4rem;
+}
+
+.pad-all-square-small {
+  padding: 2rem;
+}
+
+.pad-split-hero {
+  padding: 4rem 4rem 0 0;
+}
+
+.pad-split-hero-alt {
+  padding: 4rem 4rem 2.75rem 0;
+}
+
+.pad-text-bot-med {
+  padding-bottom: 4rem;
+}
+
+.pad-text-bot-small {
+  padding-bottom: 2rem;
+}
+
+.spacer-pad-top-med {
+  padding-top: 4rem;
+}
+
+.spacer-pad-top-med-para-offset {
+  padding-top: 3.1rem;
+}
+
+.spacer-pad-bot-med {
+  padding-bottom: 4rem;
+}
+
+.spacer-pad-tb {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+.spacer-pad-bot-xl {
+  padding-bottom: 8rem;
+}
+
+.spacer-pad-top-xl {
+  padding-top: 8rem;
+}
+
+.pad-all-med-img img {
+  padding: 4rem;
+}
+
+/* GLOBAL BUTTONS */
+
+.btn-electric-blue a {
+  background-color: var(--color-electric-blue) !important;
+  color: var(--color-white) !important;
+  border-color: var(--color-electric-blue) !important;
+
+  transition: var(--efx-350) !important;
+
+  &:hover {
+    background-color: var(--color-white) !important;
+    color: var(--color-night-blue) !important;
+    border-color: var(--color-white) !important;
+  }
+}
+
+.btn-ghost-white a {
+  background-color: transparent !important;
+  color: var(--color-white) !important;
+  border-color: var(--color-white) !important;
+
+  transition: var(--efx-350) !important;
+
+  &:hover {
+    background-color: var(--color-white) !important;
+    color: var(--color-night-blue) !important;
+    border-color: var(--color-white) !important;
+  }
+}
+
+.btn-ghost-night-blue a {
+  background-color: transparent !important;
+  color: var(--color-night-blue) !important;
+  border-color: var(--color-night-blue) !important;
+
+  transition: var(--efx-350) !important;
+
+  &:hover {
+    background-color: var(--color-electric-blue) !important;
+    color: var(--color-white) !important;
+    border-color: var(--color-electric-blue) !important;
+  }
+}
+
+.btn-ghost-night-blue.dynamic-video-lightbox-btn
+  .bdt-lightbox-wrapper
+  .elementor-button-content-wrapper {
+  flex-direction: row-reverse !important;
+  gap: 16px !important;
+}
+
+.btn-txt-night-blue a {
+  background-color: transparent !important;
+  color: var(--color-night-blue) !important;
+  padding: 0 !important;
+  border: none !important;
+
+  transition: var(--efx-350) !important;
+
+  &:hover {
+    color: var(--color-electric-blue) !important;
+  }
+}
+
+.btn-txt-white a {
+  background-color: transparent !important;
+  color: var(--color-white) !important;
+  padding: 0 !important;
+  border: none !important;
+
+  transition: var(--efx-350) !important;
+
+  &:hover {
+    color: var(--color-electric-blue) !important;
+  }
+}
+
+.btn-txt-night-blue.w-arrow a svg path,
+.btn-txt-white.w-arrow a svg path {
+  transition: var(--efx-350) !important;
+}
+
+.btn-txt-night-blue.w-arrow a:hover svg path,
+.btn-txt-white.w-arrow a:hover svg path {
+  stroke: var(--color-electric-blue) !important;
+}
+
+.w-arrow svg {
+  width: 7px !important;
+}
+
+.w-arrow-animation .elementor-button-icon {
+  margin-left: -24px !important;
+
+  transition: var(--efx-350) !important;
+
+  & svg {
+    width: 7px !important;
+    opacity: 0;
+  }
+}
+
+.w-arrow-animation:hover .elementor-button-icon {
+  margin-left: 0 !important;
+
+  & svg {
+    opacity: 1;
+    transition: opacity 350ms ease-in-out 0.25ms;
+  }
+}
+
+.dynamic-meta-btn.btn-electric-blue {
+  & a {
+    font-family: "Heebo", Sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    line-height: 0.9em;
+    border-style: solid;
+    border-width: 1px 1px 1px 1px;
+    border-radius: 0px 0px 0px 0px;
+    padding: 6px 20px 6px 20px;
+  }
+}
+
+.dynamic-meta-btn.btn-ghost-night-blue {
+  & a {
+    font-family: "Heebo", Sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    line-height: 0.9em;
+    border-style: solid;
+    border-width: 1px 1px 1px 1px;
+    border-radius: 0px 0px 0px 0px;
+    padding: 12px 20px;
+  }
+}
+
+.dynamic-meta-txt-btn.btn-txt-night-blue.w-arrow {
+  & a {
+    font-family: "Heebo", Sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    line-height: 0.9em;
+    border-style: none;
+    border-width: 0;
+    border-radius: 0px 0px 0px 0px;
+    padding: 0x;
+  }
+}
