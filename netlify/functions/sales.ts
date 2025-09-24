@@ -1,4 +1,4 @@
-import { Handler } from '@netlify/functions'
+import type { Handler } from '@netlify/functions'
 import { db } from './_db'
 import { diffMinutes, diffDays, monthKey } from './_time'
 import { OWNER_ALLOW, COUNTRY_FIELD, PROGRAM_FIELD, containsAny, pct, avg, median, topModes } from './_util'
@@ -7,7 +7,7 @@ const OWNER_FIELD = 'Owner Name'
 
 function ownersFilterSQL(include: string[]) {
   const ors = include.map(() => `LOWER(d."${OWNER_FIELD}") LIKE ?`).join(' OR ')
-  const args = include.map(v => `%${v.toLowerCase()}%`)
+  const args = include.map((v: string) => `%${v.toLowerCase()}%`)
   return { where: `(${ors})`, args }
 }
 
@@ -17,19 +17,31 @@ const json = (statusCode: number, body: any) => ({
   body: JSON.stringify(body)
 })
 
-const handler: Handler = async (event) => {
+export const handler: Handler = async (event) => {
   try {
     const qp = event.queryStringParameters || {}
-    const metaOnly = event.path.endsWith('/meta')
+    const metaOnly = (event.path || '').endsWith('/meta')
 
-    const createdMonth = qp.createdMonth || ''
-    const distributedMonth = qp.distributedMonth || ''
-    const callMonth = qp.callMonth || ''
-    const proposalMonth = qp.proposalMonth || ''
-    const owners = (qp.owners || '').split('||').filter(Boolean)
+    const createdMonth = (qp.createdMonth || '') as string
+    const distributedMonth = (qp.distributedMonth || '') as string
+    const callMonth = (qp.callMonth || '') as string
+    const proposalMonth = (qp.proposalMonth || '') as string
+    const owners = ((qp.owners || '') as string).split('||').filter(Boolean) as string[]
 
     const client = db()
 
+    // META: distinct owners fast path
+    if (metaOnly) {
+      const { where, args } = ownersFilterSQL(OWNER_ALLOW)
+      const meta = await client.execute({
+        sql: `SELECT DISTINCT d."${OWNER_FIELD}" AS owner FROM deals d WHERE ${where} ORDER BY owner`,
+        args
+      })
+      const ownersList = (meta.rows || []).map((r: any) => (r.owner as string) || '').filter(Boolean)
+      return json(200, { owners: ownersList })
+    }
+
+    const { where, args } = ownersFilterSQL(OWNER_ALLOW)
     const baseSQL = `
       SELECT
         d."Deal ID" AS deal_id,
@@ -43,15 +55,13 @@ const handler: Handler = async (event) => {
         d."Deal Proposal Sent Date Time" AS proposal_sent_at,
         d."Deal Proposal Signed Date Time" AS proposal_signed_at
       FROM deals d
-      WHERE 1=1
+      WHERE ${where}
+      LIMIT 200000
     `
-    const allow = OWNER_ALLOW
-    const { where, args } = ownersFilterSQL(allow)
-    const rowsRes = await client.execute({ sql: baseSQL + ` AND ${where} LIMIT 200000`, args })
-
+    const rowsRes = await client.execute({ sql: baseSQL, args })
     let rows = rowsRes.rows as any[]
 
-    rows = rows.filter(r =>
+    rows = rows.filter((r: any) =>
       (!createdMonth || monthKey(r.created_at) === createdMonth) &&
       (!distributedMonth || monthKey(r.distributed_at) === distributedMonth) &&
       (!callMonth || monthKey(r.calendly_time) === callMonth) &&
@@ -59,39 +69,32 @@ const handler: Handler = async (event) => {
     )
 
     if (owners.length) {
-      const set = new Set(owners.map(s => s.toLowerCase()))
-      rows = rows.filter(r => {
+      const set = new Set(owners.map((s: string) => s.toLowerCase()))
+      rows = rows.filter((r: any) => {
         const h = (r.owner || '').toLowerCase()
         for (const o of set) if (h.includes(o)) return true
         return false
       })
     }
 
-    if (metaOnly) {
-      const distinct = Array.from(new Set(rows.map(r => r.owner))).filter(Boolean)
-        .filter(o => containsAny(o, OWNER_ALLOW))
-        .sort((a,b)=> a.localeCompare(b))
-      return json(200, { owners: distinct })
-    }
-
     const overview = {
-      created: rows.filter(r => r.created_at).length,
-      distributed: rows.filter(r => r.distributed_at).length,
-      calls_scheduled: rows.filter(r => r.calendly_created_at).length,
-      calls_completed: rows.filter(r => r.calendly_time).length,
-      proposals: rows.filter(r => r.proposal_sent_at).length,
-      closed_won: rows.filter(r => r.proposal_signed_at).length
+      created: rows.filter((r: any) => r.created_at).length,
+      distributed: rows.filter((r: any) => r.distributed_at).length,
+      calls_scheduled: rows.filter((r: any) => r.calendly_created_at).length,
+      calls_completed: rows.filter((r: any) => r.calendly_time).length,
+      proposals: rows.filter((r: any) => r.proposal_sent_at).length,
+      closed_won: rows.filter((r: any) => r.proposal_signed_at).length
     }
 
-    const byOwner = group(rows, r => r.owner)
-    const ownerConversion = Object.keys(byOwner).sort((a,b)=> a.localeCompare(b)).map(owner => {
+    const byOwner = group(rows, (r: any) => r.owner || '(not set)')
+    const ownerConversion = Object.keys(byOwner).sort((a: string,b: string)=> a.localeCompare(b)).map((owner: string) => {
       const list = byOwner[owner]
-      const created = list.filter(r=>r.created_at).length
-      const distributed = list.filter(r=>r.distributed_at).length
-      const calls_scheduled = list.filter(r=>r.calendly_created_at).length
-      const calls_completed = list.filter(r=>r.calendly_time).length
-      const proposals = list.filter(r=>r.proposal_sent_at).length
-      const closed_won = list.filter(r=>r.proposal_signed_at).length
+      const created = list.filter((r:any)=>r.created_at).length
+      const distributed = list.filter((r:any)=>r.distributed_at).length
+      const calls_scheduled = list.filter((r:any)=>r.calendly_created_at).length
+      const calls_completed = list.filter((r:any)=>r.calendly_time).length
+      const proposals = list.filter((r:any)=>r.proposal_sent_at).length
+      const closed_won = list.filter((r:any)=>r.proposal_signed_at).length
       return {
         owner, created, distributed, calls_scheduled, calls_completed, proposals, closed_won,
         conv_created_to_distributed: pct(distributed, created),
@@ -102,14 +105,14 @@ const handler: Handler = async (event) => {
       }
     })
 
-    const timeIntervals = Object.keys(byOwner).sort((a,b)=> a.localeCompare(b)).map(owner => {
+    const timeIntervals = Object.keys(byOwner).sort((a:string,b:string)=> a.localeCompare(b)).map((owner: string) => {
       const list = byOwner[owner]
-      const dist = list.map(r => diffMinutes(r.created_at, r.distributed_at)).filter(n=>n!=null) as number[]
-      const booking = list.map(r => diffDays(r.distributed_at, r.calendly_created_at)).filter(n=>n!=null) as number[]
-      const conn = list.map(r => diffDays(r.calendly_created_at, r.calendly_time)).filter(n=>n!=null) as number[]
-      const distShow = list.map(r => diffDays(r.distributed_at, r.calendly_time)).filter(n=>n!=null) as number[]
-      const prop = list.map(r => diffMinutes(r.calendly_time, r.proposal_sent_at)).filter(n=>n!=null) as number[]
-      const close = list.map(r => diffDays(r.proposal_sent_at, r.proposal_signed_at)).filter(n=>n!=null) as number[]
+      const dist = list.map((r:any) => diffMinutes(r.created_at, r.distributed_at)).filter((n:any)=>n!=null) as number[]
+      const booking = list.map((r:any) => diffDays(r.distributed_at, r.calendly_created_at)).filter((n:any)=>n!=null) as number[]
+      const conn = list.map((r:any) => diffDays(r.calendly_created_at, r.calendly_time)).filter((n:any)=>n!=null) as number[]
+      const distShow = list.map((r:any) => diffDays(r.distributed_at, r.calendly_time)).filter((n:any)=>n!=null) as number[]
+      const prop = list.map((r:any) => diffMinutes(r.calendly_time, r.proposal_sent_at)).filter((n:any)=>n!=null) as number[]
+      const close = list.map((r:any) => diffDays(r.proposal_sent_at, r.proposal_signed_at)).filter((n:any)=>n!=null) as number[]
       return {
         owner,
         t_dist_avg: avg(dist), t_dist_med: median(dist), t_dist_modes: topModes(dist),
@@ -121,14 +124,14 @@ const handler: Handler = async (event) => {
       }
     })
 
-    const byCountry = group(rows, r => r[COUNTRY_FIELD] || '(not set)')
-    const breakdown = Object.keys(byCountry).sort((a,b)=>a.localeCompare(b)).map(country => {
+    const byCountry = group(rows, (r:any) => r[COUNTRY_FIELD] || '(not set)')
+    const breakdown = Object.keys(byCountry).sort((a:string,b:string)=>a.localeCompare(b)).map((country: string) => {
       const list = byCountry[country]
-      const byProgram = group(list, r => r[PROGRAM_FIELD] || '(not set)')
+      const byProgram = group(list, (r:any) => r[PROGRAM_FIELD] || '(not set)')
       return {
         key: 'c:'+country, label: country,
         metrics: counts(list),
-        children: Object.keys(byProgram).sort((a,b)=>a.localeCompare(b)).map(program => ({
+        children: Object.keys(byProgram).sort((a:string,b:string)=>a.localeCompare(b)).map((program: string) => ({
           key: 'p:'+country+':'+program, label: program,
           metrics: counts(byProgram[program])
         }))
@@ -143,7 +146,7 @@ const handler: Handler = async (event) => {
 }
 
 function group<T>(arr: T[], key: (r:T)=>string) {
-  return arr.reduce((acc:Record<string,T[]>, r) => {
+  return arr.reduce((acc:Record<string,T[]>, r: T) => {
     const k = key(r) ?? ''
     ;(acc[k] ||= []).push(r)
     return acc
@@ -151,13 +154,11 @@ function group<T>(arr: T[], key: (r:T)=>string) {
 }
 function counts(list: any[]) {
   return {
-    created: list.filter(r=>r.created_at).length,
-    distributed: list.filter(r=>r.distributed_at).length,
-    calls_scheduled: list.filter(r=>r.calendly_created_at).length,
-    calls_completed: list.filter(r=>r.calendly_time).length,
-    proposals: list.filter(r=>r.proposal_sent_at).length,
-    closed_won: list.filter(r=>r.proposal_signed_at).length
+    created: list.filter((r:any)=>r.created_at).length,
+    distributed: list.filter((r:any)=>r.distributed_at).length,
+    calls_scheduled: list.filter((r:any)=>r.calendly_created_at).length,
+    calls_completed: list.filter((r:any)=>r.calendly_time).length,
+    proposals: list.filter((r:any)=>r.proposal_sent_at).length,
+    closed_won: list.filter((r:any)=>r.proposal_signed_at).length
   }
 }
-
-export { handler }

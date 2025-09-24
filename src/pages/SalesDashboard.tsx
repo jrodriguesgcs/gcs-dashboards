@@ -5,21 +5,20 @@ import MultiSelect from '../components/MultiSelect'
 import GroupTable from '../components/GroupTable'
 import PagedTable from '../components/PagedTable'
 
-type OwnerAgg = {
-  owner: string
-  created: number
-  distributed: number
-  calls_scheduled: number
-  calls_completed: number
-  proposals: number
-  closed_won: number
-  conv_created_to_distributed: number
-  conv_distributed_to_scheduled: number
-  conv_scheduled_to_completed: number
-  conv_completed_to_proposal: number
-  conv_proposal_to_won: number
+async function fetchJSON(url: string) {
+  const r = await fetch(url)
+  if (!r.ok) {
+    const text = await r.text()
+    throw new Error(`HTTP ${r.status}: ${text.slice(0,300)}`)
+  }
+  return r.json()
 }
 
+type OwnerAgg = {
+  owner: string
+  created: number; distributed: number; calls_scheduled: number; calls_completed: number; proposals: number; closed_won: number
+  conv_created_to_distributed: number; conv_distributed_to_scheduled: number; conv_scheduled_to_completed: number; conv_completed_to_proposal: number; conv_proposal_to_won: number
+}
 type TimeStats = {
   owner: string
   t_dist_avg: number|null; t_dist_med: number|null; t_dist_modes: string;
@@ -35,6 +34,7 @@ export default function SalesDashboard() {
   const [ownersSelected, setOwnersSelected] = useState<string[]>([])
   const [months, setMonths] = useState<{[k:string]:string}>({})
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|undefined>()
 
   const qs = useMemo(() => {
     const sp = new URLSearchParams()
@@ -49,28 +49,45 @@ export default function SalesDashboard() {
   const [breakdown, setBreakdown] = useState<any[]>([])
 
   useEffect(() => {
-    setLoading(true)
-    fetch('/.netlify/functions/sales/meta')
-      .then(r => r.json())
-      .then(d => { setOwners(d.owners); setOwnersSelected(d.owners) })
+    (async () => {
+      try {
+        setLoading(true); setError(undefined)
+        const d = await fetchJSON('/.netlify/functions/sales/meta')
+        const o = (d.owners || []) as string[]
+        setOwners(o.sort((a,b)=>a.localeCompare(b)))
+        setOwnersSelected(o)
+      } catch (e:any) {
+        setError(`Failed to load owners: ${e.message || String(e)}`)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
   useEffect(() => {
-    setLoading(true)
-    fetch('/.netlify/functions/sales?' + qs)
-      .then(r => r.json())
-      .then(d => {
-        setOverview(d.tabs.overview)
-        setOwnerTable(d.tabs.ownerConversion)
-        setTimeTable(d.tabs.timeIntervals)
-        setBreakdown(d.tabs.breakdown)
-      })
-      .finally(()=>setLoading(false))
+    (async () => {
+      try {
+        setLoading(true); setError(undefined)
+        const d = await fetchJSON('/.netlify/functions/sales?' + qs)
+        setOverview(d.tabs?.overview)
+        setOwnerTable(d.tabs?.ownerConversion || [])
+        setTimeTable(d.tabs?.timeIntervals || [])
+        setBreakdown(d.tabs?.breakdown || [])
+      } catch (e:any) {
+        setError(`Failed to load sales data: ${e.message || String(e)}`)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [qs])
 
   return (
     <section className="grid" style={{gap:12}}>
-      {/* Filters */}
+      {error && <div className="card pad" style={{border:'2px solid #f66', background:'#fff5f5'}}>
+        <div className="fw-bold" style={{color:'#b00020'}}>Error</div>
+        <div className="fs-text-sm">{error}</div>
+      </div>}
+
       <div className="grid" style={{gridTemplateColumns:'2fr 1fr', gap:12}}>
         <div className="card pad">
           <div className="fs-text-lg fw-semibold" style={{marginBottom:8}}>Filters</div>
@@ -83,15 +100,9 @@ export default function SalesDashboard() {
             ))}
           </div>
         </div>
-        <MultiSelect
-          label="Owner Name"
-          options={owners}
-          value={ownersSelected}
-          onChange={setOwnersSelected}
-        />
+        <MultiSelect label="Owner Name" options={owners} value={ownersSelected} onChange={setOwnersSelected} />
       </div>
 
-      {/* KPIs */}
       {overview && (
         <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(160px,1fr))', gap:12}}>
           <Kpi label="Created" value={overview.created} />

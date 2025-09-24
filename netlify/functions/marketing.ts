@@ -1,4 +1,4 @@
-import { Handler } from '@netlify/functions'
+import type { Handler } from '@netlify/functions'
 import { db } from './_db'
 import { monthKey } from './_time'
 import { normalizeUTM, maskEmail } from './_util'
@@ -17,12 +17,12 @@ const CONTACT_CREATED = 'Date Created'
 
 const json = (statusCode:number, body:any)=>({ statusCode, headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
 
-const handler: Handler = async (event) => {
+export const handler: Handler = async (event) => {
   try {
     const qp = event.queryStringParameters || {}
     const contactOnly = qp.contactOnly === '1'
 
-    const ranges = {
+    const ranges: Record<string,[string?, string?]> = {
       contactCreated: [qp.contactCreatedFrom, qp.contactCreatedTo],
       dealCreated: [qp.dealCreatedFrom, qp.dealCreatedTo],
       distributed: [qp.distributedFrom, qp.distributedTo],
@@ -76,9 +76,9 @@ const handler: Handler = async (event) => {
 
     if (contactOnly) {
       const [from,to] = ranges.contactCreated
-      rows = rows.filter(r => inRange(r.contact_created, from, to))
+      rows = rows.filter((r:any) => inRange(r.contact_created, from, to))
     } else {
-      rows = rows.filter(r =>
+      rows = rows.filter((r:any) =>
         inRange(r.contact_created, ranges.contactCreated[0], ranges.contactCreated[1]) &&
         inRange(r.deal_created, ranges.dealCreated[0], ranges.dealCreated[1]) &&
         inRange(r.distributed_at, ranges.distributed[0], ranges.distributed[1]) &&
@@ -112,20 +112,20 @@ const handler: Handler = async (event) => {
     }
 
     function buildTree(items:any[], picker: (r:any)=>{m:string,s:string,c:string}) {
-      const byM = group(items, r => picker(r).m)
-      return Object.keys(byM).sort((a,b)=>a.localeCompare(b)).map(med => {
+      const byM = group(items, (r:any) => picker(r).m)
+      return Object.keys(byM).sort((a:string,b:string)=>a.localeCompare(b)).map((med: string) => {
         const listM = byM[med]
-        const byS = group(listM, r => picker(r).s)
+        const byS = group(listM, (r:any) => picker(r).s)
         return {
           key:'m:'+med, label: med,
           metrics: stepCounts(listM),
-          children: Object.keys(byS).sort((a,b)=>a.localeCompare(b)).map(src => {
+          children: Object.keys(byS).sort((a:string,b:string)=>a.localeCompare(b)).map((src: string) => {
             const listS = byS[src]
-            const byC = group(listS, r => picker(r).c)
+            const byC = group(listS, (r:any) => picker(r).c)
             return {
               key:'s:'+med+':'+src, label: src,
               metrics: stepCounts(listS),
-              children: Object.keys(byC).sort((a,b)=>a.localeCompare(b)).map(cam => ({
+              children: Object.keys(byC).sort((a:string,b:string)=>a.localeCompare(b)).map((cam: string) => ({
                 key:'c:'+med+':'+src+':'+cam, label: cam,
                 metrics: stepCounts(byC[cam])
               }))
@@ -136,10 +136,10 @@ const handler: Handler = async (event) => {
     }
 
     const tabs = {
-      utm: buildTree(rows, r => groupMSC(r.utm_medium, r.utm_source, r.utm_campaign)),
-      firstTouch: buildTree(rows, r => groupMSC(r.ft_medium, r.ft_source, r.ft_campaign)),
-      ftSubmission: buildTree(rows, r => groupMSC(r.ft_medium, r.ft_source, r.ft_submission_page)),
-      submission: buildTree(rows, r => groupMSC(r.utm_medium, r.utm_source, r.submission_page))
+      utm: buildTree(rows, (r:any) => groupMSC(r.utm_medium, r.utm_source, r.utm_campaign)),
+      firstTouch: buildTree(rows, (r:any) => groupMSC(r.ft_medium, r.ft_source, r.ft_campaign)),
+      ftSubmission: buildTree(rows, (r:any) => groupMSC(r.ft_medium, r.ft_source, r.ft_submission_page)),
+      submission: buildTree(rows, (r:any) => groupMSC(r.utm_medium, r.utm_source, r.submission_page))
     }
 
     const sampleRows = rows.slice(0, 500).map((r:any) => ({
@@ -156,5 +156,3 @@ const handler: Handler = async (event) => {
     return json(500, { error: e?.message || String(e) })
   }
 }
-
-export { handler }

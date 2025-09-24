@@ -46,7 +46,6 @@ export function maskEmail(email?: string|null) {
   return `${u[0]}***@${d}`
 }
 
-// UTM normalization (NOT for CPC/PPC)
 const TOP_LEVEL = new Set(['organic','social','cpc','ppc','redirect','referrer','email','(not set)'])
 export function normalizeUTM(medium?: string|null, source?: string|null) {
   let med = (medium||'(not set)').toLowerCase().trim()

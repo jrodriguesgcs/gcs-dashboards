@@ -3,6 +3,15 @@ import { Tabs } from '../components/Tabs'
 import GroupTable from '../components/GroupTable'
 import PagedTable from '../components/PagedTable'
 
+async function fetchJSON(url: string) {
+  const r = await fetch(url)
+  if (!r.ok) {
+    const text = await r.text()
+    throw new Error(`HTTP ${r.status}: ${text.slice(0,300)}`)
+  }
+  return r.json()
+}
+
 type GroupNode = { key:string; label:string; metrics?:Record<string,number>; children?:GroupNode[] }
 
 export default function MarketingDashboard() {
@@ -11,6 +20,7 @@ export default function MarketingDashboard() {
   const [tabData, setTabData] = useState<{utm:GroupNode[]; firstTouch:GroupNode[]; ftSubmission:GroupNode[]; submission:GroupNode[]}>()
   const [sampleRows, setSampleRows] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|undefined>()
 
   const qs = useMemo(() => {
     const sp = new URLSearchParams()
@@ -20,11 +30,18 @@ export default function MarketingDashboard() {
   }, [ranges, contactOnly])
 
   useEffect(() => {
-    setLoading(true)
-    fetch('/.netlify/functions/marketing?' + qs)
-      .then(r => r.json())
-      .then(d => { setTabData(d.tabs); setSampleRows(d.sampleRows ?? []) })
-      .finally(() => setLoading(false))
+    (async () => {
+      try {
+        setLoading(true); setError(undefined)
+        const d = await fetchJSON('/.netlify/functions/marketing?' + qs)
+        setTabData(d.tabs)
+        setSampleRows(d.sampleRows ?? [])
+      } catch (e:any) {
+        setError(`Failed to load marketing data: ${e.message || String(e)}`)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [qs])
 
   const filters = (
@@ -56,6 +73,11 @@ export default function MarketingDashboard() {
 
   return (
     <section className="grid" style={{gap:12}}>
+      {error && <div className="card pad" style={{border:'2px solid #f66', background:'#fff5f5'}}>
+        <div className="fw-bold" style={{color:'#b00020'}}>Error</div>
+        <div className="fs-text-sm">{error}</div>
+      </div>}
+
       {filters}
       <Tabs
         tabs={[

@@ -1,5 +1,4 @@
-// netlify/functions/_db.ts
-import { createClient } from '@libsql/client' // ← use Node client (not '/web')
+import { createClient } from '@libsql/client' // Node runtime client
 
 export function db() {
   const url = process.env.TURSO_DATABASE_URL

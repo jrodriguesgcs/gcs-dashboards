@@ -5,14 +5,18 @@ import MultiSelect from '../components/MultiSelect'
 import GroupTable from '../components/GroupTable'
 import PagedTable from '../components/PagedTable'
 
+async function fetchJSON(url: string) {
+  const r = await fetch(url)
+  if (!r.ok) {
+    const text = await r.text()
+    throw new Error(`HTTP ${r.status}: ${text.slice(0,300)}`)
+  }
+  return r.json()
+}
+
 type AgentAgg = {
   sdr_agent: string
-  created: number
-  distributed: number
-  calls_scheduled: number
-  calls_completed: number
-  proposals: number
-  closed_won: number
+  created: number; distributed: number; calls_scheduled: number; calls_completed: number; proposals: number; closed_won: number
 }
 type TimeStats = {
   sdr_agent: string
@@ -29,6 +33,7 @@ export default function SdrDashboard() {
   const [agentsSel, setAgentsSel] = useState<string[]>([])
   const [months, setMonths] = useState<{[k:string]:string}>({})
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|undefined>()
 
   const qs = useMemo(() => {
     const sp = new URLSearchParams()
@@ -44,28 +49,46 @@ export default function SdrDashboard() {
   const [breakdown, setBreakdown] = useState<any[]>([])
 
   useEffect(() => {
-    setLoading(true)
-    fetch('/.netlify/functions/sdr/meta')
-      .then(r => r.json())
-      .then(d => { setAgents(d.agents); setAgentsSel(d.agents) })
+    (async () => {
+      try {
+        setLoading(true); setError(undefined)
+        const d = await fetchJSON('/.netlify/functions/sdr/meta')
+        const a = (d.agents || []) as string[]
+        setAgents(a.sort((x,y)=>x.localeCompare(y)))
+        setAgentsSel(a)
+      } catch (e:any) {
+        setError(`Failed to load SDR agents: ${e.message || String(e)}`)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
   useEffect(() => {
-    setLoading(true)
-    fetch('/.netlify/functions/sdr?' + qs)
-      .then(r => r.json())
-      .then(d => {
-        setOverview(d.tabs.overview)
-        setAgentTable(d.tabs.agentConversion)
-        setTimeTable(d.tabs.timeIntervals)
-        setLostReasons(d.tabs.mqlLostReasons)
-        setBreakdown(d.tabs.breakdown)
-      })
-      .finally(()=>setLoading(false))
+    (async () => {
+      try {
+        setLoading(true); setError(undefined)
+        const d = await fetchJSON('/.netlify/functions/sdr?' + qs)
+        setOverview(d.tabs?.overview)
+        setAgentTable(d.tabs?.agentConversion || [])
+        setTimeTable(d.tabs?.timeIntervals || [])
+        setLostReasons(d.tabs?.mqlLostReasons || [])
+        setBreakdown(d.tabs?.breakdown || [])
+      } catch (e:any) {
+        setError(`Failed to load SDR data: ${e.message || String(e)}`)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [qs])
 
   return (
     <section className="grid" style={{gap:12}}>
+      {error && <div className="card pad" style={{border:'2px solid #f66', background:'#fff5f5'}}>
+        <div className="fw-bold" style={{color:'#b00020'}}>Error</div>
+        <div className="fs-text-sm">{error}</div>
+      </div>}
+
       <div className="grid" style={{gridTemplateColumns:'2fr 1fr', gap:12}}>
         <div className="card pad">
           <div className="fs-text-lg fw-semibold" style={{marginBottom:8}}>Filters</div>
@@ -141,13 +164,10 @@ export default function SdrDashboard() {
           {
             key:'lost',
             label:'MQL Lost Reasons',
-            content: <PagedTable
-              rows={lostReasons}
-              columns={[
-                {key:'reason', label:'MQL Lost Reason'},
-                {key:'count', label:'Count'}
-              ]}
-            />
+            content: <PagedTable rows={lostReasons} columns={[
+              {key:'reason', label:'MQL Lost Reason'},
+              {key:'count', label:'Count'}
+            ]} />
           },
           {
             key:'breakdown',

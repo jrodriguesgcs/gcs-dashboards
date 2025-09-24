@@ -1,19 +1,13 @@
 import { DateTime } from 'luxon'
 
-// Parse to a UTC ISO string, trying several common formats.
-// We avoid passing the 3rd "options" argument to satisfy TS types across Luxon versions.
 export function parseToUTCISO(s?: string | null): string | null {
   if (!s) return null
   const t = s.trim()
 
   const candidates = [
-    // ISO first (accepts offsets like Z or +00:00)
     () => DateTime.fromISO(t),
-    // "YYYY-MM-DD HH:mm:ss"
     () => DateTime.fromFormat(t, "yyyy-MM-dd HH:mm:ss"),
-    // "MM/DD/YYYY HH:mm"
     () => DateTime.fromFormat(t, "MM/dd/yyyy HH:mm"),
-    // plain date
     () => DateTime.fromFormat(t, "yyyy-MM-dd")
   ]
 
@@ -44,7 +38,7 @@ export function diffDays(start?: string|null, end?: string|null): number|null {
 
 export function createdDOW(s?: string|null): string|null {
   const iso = parseToUTCISO(s); if (!iso) return null
-  return DateTime.fromISO(iso).setZone(LISBON).toFormat('cccc') // Monday, Tuesday…
+  return DateTime.fromISO(iso).setZone(LISBON).toFormat('cccc')
 }
 
 export function createdHour(s?: string|null): number|null {
@@ -52,7 +46,6 @@ export function createdHour(s?: string|null): number|null {
   return DateTime.fromISO(iso).setZone(LISBON).hour
 }
 
-// Month key YYYY-MM computed in Lisbon zone
 export function monthKey(s?: string|null): string|null {
   const iso = parseToUTCISO(s); if (!iso) return null
   return DateTime.fromISO(iso).setZone(LISBON).toFormat('yyyy-LL')

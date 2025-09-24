@@ -1,4 +1,3 @@
-// netlify/functions/health.ts
 import type { Handler } from '@netlify/functions'
 import { db } from './_db'
 
@@ -8,9 +7,8 @@ export const handler: Handler = async () => {
     const hasToken = !!process.env.TURSO_AUTH_TOKEN
     const client = db()
 
-    // tiny, fast query
     const res = await client.execute({ sql: `SELECT name FROM sqlite_master WHERE type='table' LIMIT 5`, args: [] })
-    const tables = res.rows?.map(r => r.name) ?? []
+    const tables = (res.rows || []).map((r: any) => r.name)
 
     return {
       statusCode: 200,
