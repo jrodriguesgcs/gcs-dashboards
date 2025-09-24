@@ -47,7 +47,9 @@ export default function MarketingDashboard() {
   const filters = (
     <div className="card pad" style={{marginBottom:12}}>
       <div className="fs-text-lg fw-semibold" style={{marginBottom:8}}>Filters</div>
-      <div className="grid auto">
+
+      {/* vertical orientation */}
+      <div className="grid" style={{gridTemplateColumns:'1fr', gap:12}}>
         {[
           ['contactCreated','Contact Created'],
           ['dealCreated','Deal Created'],
@@ -55,17 +57,20 @@ export default function MarketingDashboard() {
           ['proposalSent','Proposal Sent'],
           ['proposalSigned','Proposal Signed'],
         ].map(([key,label]) => (
-          <div key={key} className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:8}}>
-            <label className="fs-text-sm fw-semibold">{label} From
-              <input className="btn" type="date" onChange={e => setRanges(r => ({...r, [key]: {...r[key], from: e.target.value}}))} />
-            </label>
-            <label className="fs-text-sm fw-semibold">{label} To
-              <input className="btn" type="date" onChange={e => setRanges(r => ({...r, [key]: {...r[key], to: e.target.value}}))} />
-            </label>
+          <div key={key} className="grid" style={{gridTemplateColumns:'1fr', gap:6}}>
+            <label className="fs-text-sm fw-semibold">{label} From</label>
+            <input className="btn" type="date"
+              onChange={e => setRanges(r => ({...r, [key]: {...r[key], from: e.target.value}}))}
+            />
+            <label className="fs-text-sm fw-semibold" style={{marginTop:6}}>{label} To</label>
+            <input className="btn" type="date"
+              onChange={e => setRanges(r => ({...r, [key]: {...r[key], to: e.target.value}}))}
+            />
           </div>
         ))}
       </div>
-      <div style={{marginTop:8}}>
+
+      <div style={{marginTop:12}}>
         <label><input type="checkbox" checked={contactOnly} onChange={e=>setContactOnly(e.target.checked)} /> Filter only by contact created date</label>
       </div>
     </div>

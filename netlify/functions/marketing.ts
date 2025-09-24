@@ -3,6 +3,10 @@ import { db } from './_db'
 import { monthKey } from './_time'
 import { normalizeUTM, maskEmail } from './_util'
 
+// Contact fields (keep "Date Created" with normal quoting)
+const CONTACT_CREATED = 'Date Created'
+
+// UTM / First-touch field names (we'll bracket-quote them in SQL)
 const FT_MED = '*First Touch UTM Medium'
 const FT_SRC = '*First Touch UTM Source'
 const FT_CAM = '*First Touch UTM Campaign'
@@ -13,9 +17,10 @@ const UTM_SRC = '*UTM Source'
 const UTM_CAM = '*UTM Campaign'
 const SUB_PAGE = '*Submission Page'
 
-const CONTACT_CREATED = 'Date Created'
-
 const json = (statusCode:number, body:any)=>({ statusCode, headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
+
+// helper to safely wrap weird column names for SQLite
+const Q = (s:string) => `[${s.replace(/]/g, ']]')}]`
 
 export const handler: Handler = async (event) => {
   try {
@@ -38,15 +43,15 @@ export const handler: Handler = async (event) => {
           c."Email" AS email,
           c."${CONTACT_CREATED}" AS contact_created,
 
-          c."${UTM_MED}" AS utm_medium,
-          c."${UTM_SRC}" AS utm_source,
-          c."${UTM_CAM}" AS utm_campaign,
-          c."${SUB_PAGE}" AS submission_page,
+          c.${Q(UTM_MED)} AS utm_medium,
+          c.${Q(UTM_SRC)} AS utm_source,
+          c.${Q(UTM_CAM)} AS utm_campaign,
+          c.${Q(SUB_PAGE)} AS submission_page,
 
-          c."${FT_MED}" AS ft_medium,
-          c."${FT_SRC}" AS ft_source,
-          c."${FT_CAM}" AS ft_campaign,
-          c."${FT_SUB}" AS ft_submission_page,
+          c.${Q(FT_MED)} AS ft_medium,
+          c.${Q(FT_SRC)} AS ft_source,
+          c.${Q(FT_CAM)} AS ft_campaign,
+          c.${Q(FT_SUB)} AS ft_submission_page,
 
           d."Deal ID" AS deal_id,
           d."Deal Creation Date Time" AS deal_created,
