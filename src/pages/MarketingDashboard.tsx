@@ -33,7 +33,7 @@ export default function MarketingDashboard() {
     (async () => {
       try {
         setLoading(true); setError(undefined)
-        const d = await fetchJSON('/.netlify/functions/marketing?' + qs)
+        const d = await fetchJSON('/api/marketing?' + qs)
         setTabData(d.tabs)
         setSampleRows(d.sampleRows ?? [])
       } catch (e:any) {

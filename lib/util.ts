@@ -9,7 +9,7 @@ export const PROGRAM_FIELD = 'Primary Program of Interest'
 
 export function containsAny(hay: string, list: string[]) {
   const s = (hay||'').toLowerCase()
-  return list.some(x => s.includes(x.toLowerCase()))
+  return list.some((x: string) => s.includes(x.toLowerCase()))
 }
 
 export function pct(a: number, b: number) {
@@ -18,11 +18,11 @@ export function pct(a: number, b: number) {
 
 export function avg(arr: number[]) {
   if (!arr.length) return null
-  return Math.round((arr.reduce((a,b)=>a+b,0)/arr.length)*100)/100
+  return Math.round((arr.reduce((a:number,b:number)=>a+b,0)/arr.length)*100)/100
 }
 export function median(arr: number[]) {
   if (!arr.length) return null
-  const s = [...arr].sort((a,b)=>a-b)
+  const s = [...arr].sort((a:number,b:number)=>a-b)
   const mid = Math.floor(s.length/2)
   const val = s.length % 2 ? s[mid] : (s[mid-1]+s[mid])/2
   return Math.round(val*100)/100
@@ -32,7 +32,7 @@ export function topModes(arr: number[], top=3) {
   const map = new Map<number, number>()
   for (const v of arr) map.set(v, (map.get(v)||0) + 1)
   return [...map.entries()]
-    .sort((a,b)=> b[1]-a[1] || a[0]-b[0])
+    .sort((a, b) => b[1]-a[1] || a[0]-b[0])
     .slice(0, top)
     .map(([v,c]) => `${Number(v.toFixed(2))} (${c})`).join(', ')
 }
@@ -46,7 +46,6 @@ export function maskEmail(email?: string|null) {
   return `${u[0]}***@${d}`
 }
 
-// UTM normalization (NOT for CPC/PPC)
 const TOP_LEVEL = new Set(['organic','social','cpc','ppc','redirect','referrer','email','(not set)'])
 export function normalizeUTM(medium?: string|null, source?: string|null) {
   let med = (medium||'(not set)').toLowerCase().trim()

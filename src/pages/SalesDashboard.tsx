@@ -1,3 +1,4 @@
+// src/pages/SalesDashboard.tsx
 import { useEffect, useMemo, useState } from 'react'
 import { Tabs } from '../components/Tabs'
 import { Kpi } from '../components/Kpi'
@@ -52,7 +53,8 @@ export default function SalesDashboard() {
     (async () => {
       try {
         setLoading(true); setError(undefined)
-        const d = await fetchJSON('/.netlify/functions/sales/meta')
+        // CHANGED: Updated API endpoint for Vercel
+        const d = await fetchJSON('/api/sales/meta')
         const o = (d.owners || []) as string[]
         setOwners(o.sort((a,b)=>a.localeCompare(b)))
         setOwnersSelected(o)
@@ -68,7 +70,8 @@ export default function SalesDashboard() {
     (async () => {
       try {
         setLoading(true); setError(undefined)
-        const d = await fetchJSON('/.netlify/functions/sales?' + qs)
+        // CHANGED: Updated API endpoint for Vercel
+        const d = await fetchJSON('/api/sales?' + qs)
         setOverview(d.tabs?.overview)
         setOwnerTable(d.tabs?.ownerConversion || [])
         setTimeTable(d.tabs?.timeIntervals || [])
@@ -81,6 +84,7 @@ export default function SalesDashboard() {
     })()
   }, [qs])
 
+  // Rest of component remains the same...
   return (
     <section className="grid" style={{gap:12}}>
       {error && <div className="card pad" style={{border:'2px solid #f66', background:'#fff5f5'}}>

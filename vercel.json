@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/sales/meta",
+      "destination": "/api/sales?pathname=/meta"
+    },
+    {
+      "source": "/api/sdr/meta", 
+      "destination": "/api/sdr?pathname=/meta"
+    }
+  ]
+}

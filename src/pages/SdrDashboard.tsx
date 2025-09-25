@@ -52,7 +52,7 @@ export default function SdrDashboard() {
     (async () => {
       try {
         setLoading(true); setError(undefined)
-        const d = await fetchJSON('/.netlify/functions/sdr/meta')
+        const d = await fetchJSON('/api/sdr/meta')
         const a = (d.agents || []) as string[]
         setAgents(a.sort((x,y)=>x.localeCompare(y)))
         setAgentsSel(a)
@@ -68,7 +68,7 @@ export default function SdrDashboard() {
     (async () => {
       try {
         setLoading(true); setError(undefined)
-        const d = await fetchJSON('/.netlify/functions/sdr?' + qs)
+        const d = await fetchJSON('/api/sdr?' + qs)
         setOverview(d.tabs?.overview)
         setAgentTable(d.tabs?.agentConversion || [])
         setTimeTable(d.tabs?.timeIntervals || [])
