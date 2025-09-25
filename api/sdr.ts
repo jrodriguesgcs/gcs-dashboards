@@ -1,19 +1,27 @@
-import type { Handler } from '@netlify/functions'
-import { db } from './_db'
-import { diffMinutes, diffDays, monthKey } from './_time'
-import { SDR_FIELD, COUNTRY_FIELD, PROGRAM_FIELD, avg, median, topModes } from './_util'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { db } from '../lib/db'
+import { diffMinutes, diffDays, monthKey } from '../lib/time'
+import { SDR_FIELD, COUNTRY_FIELD, PROGRAM_FIELD, avg, median, topModes } from '../lib/util'
 
-const json = (statusCode:number, body:any)=>({ statusCode, headers:{'content-type':'application/json'}, body: JSON.stringify(body)})
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
 
-export const handler: Handler = async (event) => {
   try {
-    const qp = event.queryStringParameters || {}
-    const metaOnly = (event.path || '').endsWith('/meta')
-    const createdMonth = (qp.createdMonth || '') as string
-    const distributedMonth = (qp.distributedMonth || '') as string
-    const callMonth = (qp.callMonth || '') as string
-    const proposalMonth = (qp.proposalMonth || '') as string
-    const agents = ((qp.agents || '') as string).split('||').filter(Boolean) as string[]
+    const qp = req.query as Record<string, string>
+    const metaOnly = req.query.pathname === '/meta'
+    const createdMonth = qp.createdMonth || ''
+    const distributedMonth = qp.distributedMonth || ''
+    const callMonth = qp.callMonth || ''
+    const proposalMonth = qp.proposalMonth || ''
+    const agents = (qp.agents || '').split('||').filter(Boolean)
 
     const client = db()
 
@@ -23,7 +31,8 @@ export const handler: Handler = async (event) => {
         args: []
       })
       const list = (meta.rows || []).map((r:any) => (r.sdr_agent as string) || '').filter(Boolean)
-      return json(200, { agents: list })
+      client.close()
+      return res.status(200).json({ agents: list })
     }
 
     const rowsRes = await client.execute({
@@ -124,16 +133,18 @@ export const handler: Handler = async (event) => {
       .map(([reason, list]) => ({ reason, count: (list as any[]).length }))
       .sort((a:{count:number}, b:{count:number})=> b.count - a.count)
 
-    return json(200, { tabs: { overview, agentConversion, timeIntervals, mqlLostReasons: reasonCounts, breakdown } })
+    client.close()
+    return res.status(200).json({ tabs: { overview, agentConversion, timeIntervals, mqlLostReasons: reasonCounts, breakdown } })
   } catch (e:any) {
     console.error('sdr error', e)
-    return json(500, { error: e?.message || String(e) })
+    return res.status(500).json({ error: e?.message || String(e) })
   }
 }
 
 function group<T>(arr:T[], key:(r:T)=>string){
   return arr.reduce((acc:Record<string,T[]>, r:T)=>{ const k = key(r)||''; (acc[k] ||= []).push(r); return acc },{})
 }
+
 function counts(list:any[]){
   return {
     created: list.filter((r:any)=>r.created_at).length,

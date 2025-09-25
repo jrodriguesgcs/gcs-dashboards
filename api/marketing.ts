@@ -1,7 +1,7 @@
-import type { Handler } from '@netlify/functions'
-import { db } from './_db'
-import { monthKey } from './_time'
-import { normalizeUTM, maskEmail } from './_util'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { db } from '../lib/db'
+import { monthKey } from '../lib/time'
+import { normalizeUTM, maskEmail } from '../lib/util'
 
 // Contact fields (keep "Date Created" with normal quoting)
 const CONTACT_CREATED = 'Date Created'
@@ -17,14 +17,22 @@ const UTM_SRC = '*UTM Source'
 const UTM_CAM = '*UTM Campaign'
 const SUB_PAGE = '*Submission Page'
 
-const json = (statusCode:number, body:any)=>({ statusCode, headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
-
 // helper to safely wrap weird column names for SQLite
 const Q = (s:string) => `[${s.replace(/]/g, ']]')}]`
 
-export const handler: Handler = async (event) => {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   try {
-    const qp = event.queryStringParameters || {}
+    const qp = req.query as Record<string, string>
     const contactOnly = qp.contactOnly === '1'
 
     const ranges: Record<string,[string?, string?]> = {
@@ -36,7 +44,7 @@ export const handler: Handler = async (event) => {
     }
 
     const client = db()
-    const res = await client.execute({
+    const result = await client.execute({
       sql: `
         SELECT
           c."ID" AS contact_id,
@@ -66,7 +74,7 @@ export const handler: Handler = async (event) => {
       `,
       args: []
     })
-    let rows = res.rows as any[]
+    let rows = result.rows as any[]
 
     const inRange = (val?: string|null, from?: string, to?: string) => {
       if (!from && !to) return true
@@ -155,9 +163,10 @@ export const handler: Handler = async (event) => {
       utm_campaign: r.utm_campaign || '(not set)'
     }))
 
-    return json(200, { tabs, sampleRows })
+    client.close()
+    return res.status(200).json({ tabs, sampleRows })
   } catch (e:any) {
     console.error('marketing error', e)
-    return json(500, { error: e?.message || String(e) })
+    return res.status(500).json({ error: e?.message || String(e) })
   }
 }
