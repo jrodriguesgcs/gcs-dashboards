@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { db } from '../lib/db.js'
 
 export default async function handler(
   req: VercelRequest,
@@ -13,10 +12,21 @@ export default async function handler(
   }
   
   try {
+    // Use require instead of import for @libsql/client
+    const { createClient } = require('@libsql/client')
+    
     const url = process.env.TURSO_DATABASE_URL
-    const hasToken = !!process.env.TURSO_AUTH_TOKEN
-    const client = db()
-
+    const authToken = process.env.TURSO_AUTH_TOKEN
+    
+    if (!url || !authToken) {
+      return res.status(400).json({ 
+        error: 'Missing database credentials',
+        hasUrl: !!url,
+        hasToken: !!authToken
+      })
+    }
+    
+    const client = createClient({ url, authToken, intMode: 'number' })
     const result = await client.execute({ 
       sql: `SELECT name FROM sqlite_master WHERE type='table' LIMIT 5`, 
       args: [] 
@@ -27,7 +37,7 @@ export default async function handler(
 
     return res.status(200).json({ 
       ok: true, 
-      url: url?.split('@')[1], // Show domain only
+      url: url?.split('@')[1],
       hasToken, 
       tables 
     })
