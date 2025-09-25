@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { db } from '../lib/db'
-import { diffMinutes, diffDays, monthKey } from '../lib/time'
-import { SDR_FIELD, COUNTRY_FIELD, PROGRAM_FIELD, avg, median, topModes } from '../lib/util'
+import { db } from '../lib/db.js'
+import { diffMinutes, diffDays, monthKey } from '../lib/time.js'
+import { SDR_FIELD, COUNTRY_FIELD, PROGRAM_FIELD, avg, median, topModes } from '../lib/util.js'
 
 export default async function handler(
   req: VercelRequest,

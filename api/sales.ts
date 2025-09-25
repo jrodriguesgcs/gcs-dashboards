@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { db } from '../lib/db'
-import { diffMinutes, diffDays, monthKey } from '../lib/time'
-import { OWNER_ALLOW, COUNTRY_FIELD, PROGRAM_FIELD, pct, avg, median, topModes } from '../lib/util'
+import { db } from '../lib/db.js'
+import { diffMinutes, diffDays, monthKey } from '../lib/time.js'
+import { OWNER_ALLOW, COUNTRY_FIELD, PROGRAM_FIELD, pct, avg, median, topModes } from '../lib/util.js'
 
 const OWNER_FIELD = 'Owner Name'
 

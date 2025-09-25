@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { db } from '../lib/db'
-import { monthKey } from '../lib/time'
-import { normalizeUTM, maskEmail } from '../lib/util'
+import { db } from '../lib/db.js'
+import { monthKey } from '../lib/time.js'
+import { normalizeUTM, maskEmail } from '../lib/util.js'
 
 // Contact fields (keep "Date Created" with normal quoting)
 const CONTACT_CREATED = 'Date Created'
