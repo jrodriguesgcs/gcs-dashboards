@@ -5,6 +5,7 @@ export function DashboardSwitcher() {
     { to: '/sales', label: 'Sales' },
     { to: '/sdr', label: 'SDR' },
     { to: '/marketing', label: 'Marketing UTM' },
+    { to: '/diagnostic', label: '🔧 Diagnostic' }, // Add this
   ]
   return (
     <nav className="switcher">

@@ -3,6 +3,7 @@ import { DashboardSwitcher } from './components/DashboardSwitcher'
 import SalesDashboard from './pages/SalesDashboard'
 import SdrDashboard from './pages/SdrDashboard'
 import MarketingDashboard from './pages/MarketingDashboard'
+import DiagnosticPage from './pages/DiagnosticPage' // Add this
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/sales" element={<SalesDashboard />} />
         <Route path="/sdr" element={<SdrDashboard />} />
         <Route path="/marketing" element={<MarketingDashboard />} />
+        <Route path="/diagnostic" element={<DiagnosticPage />} />  {/* Add this */}
       </Routes>
     </div>
   )
