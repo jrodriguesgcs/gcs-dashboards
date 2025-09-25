@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { getDb, query } from '../lib/db'
 
 export default async function handler(
   req: VercelRequest,
@@ -12,40 +13,43 @@ export default async function handler(
   }
   
   try {
-    // Use require instead of import for @libsql/client
-    const { createClient } = require('@libsql/client')
+    // Test database connection
+    const db = getDb()
     
-    const url = process.env.TURSO_DATABASE_URL
-    const authToken = process.env.TURSO_AUTH_TOKEN
+    // Get table info
+    const tables = query(`SELECT name FROM sqlite_master WHERE type='table'`) as any[]
+    const tableNames = tables.map(t => t.name)
     
-    if (!url || !authToken) {
-      return res.status(400).json({ 
-        error: 'Missing database credentials',
-        hasUrl: !!url,
-        hasToken: !!authToken
-      })
+    // Get row counts
+    let contactCount = 0
+    let dealCount = 0
+    
+    if (tableNames.includes('contacts')) {
+      const result = query('SELECT COUNT(*) as count FROM contacts') as any[]
+      contactCount = result[0]?.count || 0
     }
     
-    const client = createClient({ url, authToken, intMode: 'number' })
-    const result = await client.execute({ 
-      sql: `SELECT name FROM sqlite_master WHERE type='table' LIMIT 5`, 
-      args: [] 
-    })
-    const tables = (result.rows || []).map((r: any) => r.name)
-    
-    client.close()
+    if (tableNames.includes('deals')) {
+      const result = query('SELECT COUNT(*) as count FROM deals') as any[]
+      dealCount = result[0]?.count || 0
+    }
 
     return res.status(200).json({ 
-      ok: true, 
-      url: url?.split('@')[1],
-      hasToken, 
-      tables 
+      ok: true,
+      database: 'local SQLite',
+      tables: tableNames,
+      counts: {
+        contacts: contactCount,
+        deals: dealCount
+      },
+      timestamp: new Date().toISOString()
     })
   } catch (e: any) {
     console.error('Health check error:', e)
     return res.status(500).json({ 
       ok: false, 
-      error: e?.message || String(e) 
+      error: e?.message || String(e),
+      timestamp: new Date().toISOString()
     })
   }
 }

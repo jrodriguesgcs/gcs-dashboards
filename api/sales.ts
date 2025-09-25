@@ -1,14 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { db } from '../lib/db.js'
-import { diffMinutes, diffDays, monthKey } from '../lib/time.js'
-import { OWNER_ALLOW, COUNTRY_FIELD, PROGRAM_FIELD, pct, avg, median, topModes } from '../lib/util.js'
+import { query } from '../lib/db'
+import { diffMinutes, diffDays } from '../lib/time'
 
-const OWNER_FIELD = 'Owner Name'
+// Helper functions
+function pct(a: number, b: number) {
+  return b > 0 ? Math.round((a/b)*1000)/10 : 0
+}
 
-function ownersFilterSQL(include: string[]) {
-  const ors = include.map(() => `LOWER(d."${OWNER_FIELD}") LIKE ?`).join(' OR ')
-  const args = include.map((v: string) => `%${v.toLowerCase()}%`)
-  return { where: `(${ors})`, args }
+function group<T>(arr: T[], keyFn: (item: T) => string): Record<string, T[]> {
+  return arr.reduce((acc, item) => {
+    const key = keyFn(item) || '(not set)'
+    if (!acc[key]) acc[key] = []
+    acc[key].push(item)
+    return acc
+  }, {} as Record<string, T[]>)
 }
 
 export default async function handler(
@@ -24,38 +29,33 @@ export default async function handler(
 
   try {
     const metaOnly = req.query.pathname === '/meta'
-    const qp = req.query as Record<string, string>
     
-    const createdMonth = qp.createdMonth || ''
-    const distributedMonth = qp.distributedMonth || ''
-    const callMonth = qp.callMonth || ''
-    const proposalMonth = qp.proposalMonth || ''
-    const owners = (qp.owners || '').split('||').filter(Boolean)
-
-    const client = db()
-
-    // META: distinct owners fast path
+    // For meta, just return owner list
     if (metaOnly) {
-      const { where, args } = ownersFilterSQL(OWNER_ALLOW)
-      const meta = await client.execute({
-        sql: `SELECT DISTINCT d."${OWNER_FIELD}" AS owner FROM deals d WHERE ${where} ORDER BY owner`,
-        args
-      })
-      const ownersList = (meta.rows || []).map((r: any) => r.owner || '').filter(Boolean)
-      client.close()
-      return res.status(200).json({ owners: ownersList })
+      const result = query(`
+        SELECT DISTINCT "Owner Name" AS owner 
+        FROM deals 
+        WHERE "Owner Name" IS NOT NULL 
+        AND "Owner Name" != ''
+        ORDER BY "Owner Name"
+        LIMIT 50
+      `) as any[]
+      
+      const owners = result.map(r => r.owner).filter(Boolean)
+      return res.status(200).json({ owners })
     }
 
-    // Rest of your existing logic here...
-    // (Copy the rest from your original sales.ts, just remove the Handler type and json function)
-    
-    const { where, args } = ownersFilterSQL(OWNER_ALLOW)
-    const baseSQL = `
+    // Parse query parameters for filtering
+    const qp = req.query as Record<string, string>
+    const owners = (qp.owners || '').split('||').filter(Boolean)
+
+    // For main query, get deal data
+    let sql = `
       SELECT
         d."Deal ID" AS deal_id,
-        d."${OWNER_FIELD}" AS owner,
-        d."${COUNTRY_FIELD}" AS country,
-        d."${PROGRAM_FIELD}" AS program,
+        d."Owner Name" AS owner,
+        d."Primary Country of Interest" AS country,
+        d."Primary Program of Interest" AS program,
         d."Deal Creation Date Time" AS created_at,
         d."DISTRIBUTION Time" AS distributed_at,
         d."CALENDLY Event Created At" AS calendly_created_at,
@@ -63,113 +63,175 @@ export default async function handler(
         d."Deal Proposal Sent Date Time" AS proposal_sent_at,
         d."Deal Proposal Signed Date Time" AS proposal_signed_at
       FROM deals d
-      WHERE ${where}
-      LIMIT 200000
+      WHERE 1=1
     `
-    const rowsRes = await client.execute({ sql: baseSQL, args })
-    let rows = rowsRes.rows as any[]
-
-    rows = rows.filter((r: any) =>
-      (!createdMonth || monthKey(r.created_at) === createdMonth) &&
-      (!distributedMonth || monthKey(r.distributed_at) === distributedMonth) &&
-      (!callMonth || monthKey(r.calendly_time) === callMonth) &&
-      (!proposalMonth || monthKey(r.proposal_sent_at) === proposalMonth)
-    )
-
-    if (owners.length) {
-      const set = new Set(owners.map(s => s.toLowerCase()))
-      rows = rows.filter((r: any) => {
-        const h = (r.owner || '').toLowerCase()
-        for (const o of set) if (h.includes(o)) return true
-        return false
-      })
+    
+    const params: any[] = []
+    
+    // Add owner filter if provided
+    if (owners.length > 0) {
+      const placeholders = owners.map(() => '?').join(',')
+      sql += ` AND d."Owner Name" IN (${placeholders})`
+      params.push(...owners)
     }
+    
+    sql += ' LIMIT 10000'
 
-    // Continue with all your existing logic...
+    const rows = query(sql, params) as any[]
+
+    // Calculate overview stats
     const overview = {
-      created: rows.filter((r: any) => r.created_at).length,
-      distributed: rows.filter((r: any) => r.distributed_at).length,
-      calls_scheduled: rows.filter((r: any) => r.calendly_created_at).length,
-      calls_completed: rows.filter((r: any) => r.calendly_time).length,
-      proposals: rows.filter((r: any) => r.proposal_sent_at).length,
-      closed_won: rows.filter((r: any) => r.proposal_signed_at).length
+      created: rows.length,
+      distributed: rows.filter(r => r.distributed_at).length,
+      calls_scheduled: rows.filter(r => r.calendly_created_at).length,
+      calls_completed: rows.filter(r => r.calendly_time).length,
+      proposals: rows.filter(r => r.proposal_sent_at).length,
+      closed_won: rows.filter(r => r.proposal_signed_at).length
     }
 
-    const byOwner = group(rows, (r: any) => r.owner || '(not set)')
-    const ownerConversion = Object.keys(byOwner).sort((a,b) => a.localeCompare(b)).map(owner => {
-      const list = byOwner[owner]
-      const created = list.filter((r:any) => r.created_at).length
-      const distributed = list.filter((r:any) => r.distributed_at).length
-      const calls_scheduled = list.filter((r:any) => r.calendly_created_at).length
-      const calls_completed = list.filter((r:any) => r.calendly_time).length
-      const proposals = list.filter((r:any) => r.proposal_sent_at).length
-      const closed_won = list.filter((r:any) => r.proposal_signed_at).length
-      return {
-        owner, created, distributed, calls_scheduled, calls_completed, proposals, closed_won,
-        conv_created_to_distributed: pct(distributed, created),
-        conv_distributed_to_scheduled: pct(calls_scheduled, distributed),
-        conv_scheduled_to_completed: pct(calls_completed, calls_scheduled),
-        conv_completed_to_proposal: pct(proposals, calls_completed),
-        conv_proposal_to_won: pct(closed_won, proposals)
+    // Group by owner for conversion analysis
+    const byOwner = group(rows, r => r.owner || '(not set)')
+    const ownerConversion = Object.keys(byOwner)
+      .sort((a, b) => a.localeCompare(b))
+      .map(owner => {
+        const ownerRows = byOwner[owner]
+        const created = ownerRows.length
+        const distributed = ownerRows.filter(r => r.distributed_at).length
+        const calls_scheduled = ownerRows.filter(r => r.calendly_created_at).length
+        const calls_completed = ownerRows.filter(r => r.calendly_time).length
+        const proposals = ownerRows.filter(r => r.proposal_sent_at).length
+        const closed_won = ownerRows.filter(r => r.proposal_signed_at).length
+
+        return {
+          owner,
+          created,
+          distributed,
+          calls_scheduled,
+          calls_completed,
+          proposals,
+          closed_won,
+          conv_created_to_distributed: pct(distributed, created),
+          conv_distributed_to_scheduled: pct(calls_scheduled, distributed),
+          conv_scheduled_to_completed: pct(calls_completed, calls_scheduled),
+          conv_completed_to_proposal: pct(proposals, calls_completed),
+          conv_proposal_to_won: pct(closed_won, proposals)
+        }
+      })
+
+    // Time intervals analysis
+    const timeIntervals = Object.keys(byOwner)
+      .sort((a, b) => a.localeCompare(b))
+      .map(owner => {
+        const ownerRows = byOwner[owner]
+        
+        const distTimes = ownerRows
+          .map(r => diffMinutes(r.created_at, r.distributed_at))
+          .filter(t => t !== null) as number[]
+        
+        const bookingTimes = ownerRows
+          .map(r => diffDays(r.distributed_at, r.calendly_created_at))
+          .filter(t => t !== null) as number[]
+          
+        const connTimes = ownerRows
+          .map(r => diffDays(r.calendly_created_at, r.calendly_time))
+          .filter(t => t !== null) as number[]
+        
+        const distShowTimes = ownerRows
+          .map(r => diffDays(r.distributed_at, r.calendly_time))
+          .filter(t => t !== null) as number[]
+          
+        const propTimes = ownerRows
+          .map(r => diffMinutes(r.calendly_time, r.proposal_sent_at))
+          .filter(t => t !== null) as number[]
+          
+        const closeTimes = ownerRows
+          .map(r => diffDays(r.proposal_sent_at, r.proposal_signed_at))
+          .filter(t => t !== null) as number[]
+
+        const avg = (arr: number[]) => arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 100) / 100 : null
+        const median = (arr: number[]) => {
+          if (!arr.length) return null
+          const sorted = [...arr].sort((a, b) => a - b)
+          const mid = Math.floor(sorted.length / 2)
+          return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+        }
+
+        return {
+          owner,
+          t_dist_avg: avg(distTimes),
+          t_dist_med: median(distTimes),
+          t_dist_modes: distTimes.length ? `${distTimes.length} samples` : '',
+          t_booking_avg: avg(bookingTimes),
+          t_booking_med: median(bookingTimes),
+          t_booking_modes: bookingTimes.length ? `${bookingTimes.length} samples` : '',
+          t_conn_avg: avg(connTimes),
+          t_conn_med: median(connTimes),
+          t_conn_modes: connTimes.length ? `${connTimes.length} samples` : '',
+          t_dist_show_avg: avg(distShowTimes),
+          t_dist_show_med: median(distShowTimes),
+          t_dist_show_modes: distShowTimes.length ? `${distShowTimes.length} samples` : '',
+          t_prop_avg: avg(propTimes),
+          t_prop_med: median(propTimes),
+          t_prop_modes: propTimes.length ? `${propTimes.length} samples` : '',
+          t_close_avg: avg(closeTimes),
+          t_close_med: median(closeTimes),
+          t_close_modes: closeTimes.length ? `${closeTimes.length} samples` : ''
+        }
+      })
+
+    // Breakdown by country and program
+    const byCountry = group(rows, r => r.country || '(not set)')
+    const breakdown = Object.keys(byCountry)
+      .sort((a, b) => a.localeCompare(b))
+      .map(country => {
+        const countryRows = byCountry[country]
+        const byProgram = group(countryRows, r => r.program || '(not set)')
+        
+        const countryMetrics = {
+          created: countryRows.length,
+          distributed: countryRows.filter(r => r.distributed_at).length,
+          calls_scheduled: countryRows.filter(r => r.calendly_created_at).length,
+          calls_completed: countryRows.filter(r => r.calendly_time).length,
+          proposals: countryRows.filter(r => r.proposal_sent_at).length,
+          closed_won: countryRows.filter(r => r.proposal_signed_at).length
+        }
+        
+        const children = Object.keys(byProgram)
+          .sort((a, b) => a.localeCompare(b))
+          .map(program => {
+            const programRows = byProgram[program]
+            return {
+              key: `p:${country}:${program}`,
+              label: program,
+              metrics: {
+                created: programRows.length,
+                distributed: programRows.filter(r => r.distributed_at).length,
+                calls_scheduled: programRows.filter(r => r.calendly_created_at).length,
+                calls_completed: programRows.filter(r => r.calendly_time).length,
+                proposals: programRows.filter(r => r.proposal_sent_at).length,
+                closed_won: programRows.filter(r => r.proposal_signed_at).length
+              }
+            }
+          })
+
+        return {
+          key: `c:${country}`,
+          label: country,
+          metrics: countryMetrics,
+          children
+        }
+      })
+
+    return res.status(200).json({ 
+      tabs: { 
+        overview,
+        ownerConversion,
+        timeIntervals,
+        breakdown
       }
     })
-
-    const timeIntervals = Object.keys(byOwner).sort((a,b) => a.localeCompare(b)).map(owner => {
-      const list = byOwner[owner]
-      const dist = list.map((r:any) => diffMinutes(r.created_at, r.distributed_at)).filter((n:any) => n != null) as number[]
-      const booking = list.map((r:any) => diffDays(r.distributed_at, r.calendly_created_at)).filter((n:any) => n != null) as number[]
-      const conn = list.map((r:any) => diffDays(r.calendly_created_at, r.calendly_time)).filter((n:any) => n != null) as number[]
-      const distShow = list.map((r:any) => diffDays(r.distributed_at, r.calendly_time)).filter((n:any) => n != null) as number[]
-      const prop = list.map((r:any) => diffMinutes(r.calendly_time, r.proposal_sent_at)).filter((n:any) => n != null) as number[]
-      const close = list.map((r:any) => diffDays(r.proposal_sent_at, r.proposal_signed_at)).filter((n:any) => n != null) as number[]
-      return {
-        owner,
-        t_dist_avg: avg(dist), t_dist_med: median(dist), t_dist_modes: topModes(dist),
-        t_booking_avg: avg(booking), t_booking_med: median(booking), t_booking_modes: topModes(booking),
-        t_conn_avg: avg(conn), t_conn_med: median(conn), t_conn_modes: topModes(conn),
-        t_dist_show_avg: avg(distShow), t_dist_show_med: median(distShow), t_dist_show_modes: topModes(distShow),
-        t_prop_avg: avg(prop), t_prop_med: median(prop), t_prop_modes: topModes(prop),
-        t_close_avg: avg(close), t_close_med: median(close), t_close_modes: topModes(close)
-      }
-    })
-
-    const byCountry = group(rows, (r:any) => r[COUNTRY_FIELD] || '(not set)')
-    const breakdown = Object.keys(byCountry).sort((a,b) => a.localeCompare(b)).map(country => {
-      const list = byCountry[country]
-      const byProgram = group(list, (r:any) => r[PROGRAM_FIELD] || '(not set)')
-      return {
-        key: 'c:'+country, label: country,
-        metrics: counts(list),
-        children: Object.keys(byProgram).sort((a,b) => a.localeCompare(b)).map(program => ({
-          key: 'p:'+country+':'+program, label: program,
-          metrics: counts(byProgram[program])
-        }))
-      }
-    })
-
-    client.close()
-    return res.status(200).json({ tabs: { overview, ownerConversion, timeIntervals, breakdown } })
   } catch (e: any) {
-    console.error('Sales API error:', e)
-    return res.status(500).json({ error: e?.message || String(e) })
-  }
-}
-
-function group<T>(arr: T[], key: (r:T) => string) {
-  return arr.reduce((acc: Record<string,T[]>, r: T) => {
-    const k = key(r) ?? ''
-    ;(acc[k] ||= []).push(r)
-    return acc
-  }, {})
-}
-
-function counts(list: any[]) {
-  return {
-    created: list.filter((r:any) => r.created_at).length,
-    distributed: list.filter((r:any) => r.distributed_at).length,
-    calls_scheduled: list.filter((r:any) => r.calendly_created_at).length,
-    calls_completed: list.filter((r:any) => r.calendly_time).length,
-    proposals: list.filter((r:any) => r.proposal_sent_at).length,
-    closed_won: list.filter((r:any) => r.proposal_signed_at).length
+    console.error('Sales error:', e)
+    return res.status(500).json({ error: e.message || String(e) })
   }
 }
